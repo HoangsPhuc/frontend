@@ -65,8 +65,9 @@ export default function SettingsView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription),
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to subscribe:', e);
+      alert('Lỗi đăng ký thông báo ngầm: ' + (e.message || e));
     }
   };
 
