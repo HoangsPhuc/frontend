@@ -132,8 +132,6 @@ export async function POST(request: NextRequest) {
             body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
             icon: '/logo.jpg',
             badge: '/logo.jpg',
-            tag: `msg-${senderId}`,
-            renotify: true,
             vibrate: [200, 100, 200],
             data: { url: '/' },
           },
