@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           title: `💬 ${senderName}`,
           options: {
             body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
-            icon: '/logo.jpg',
+            icon: session.user.avatarUrl || '/logo.jpg',
             badge: '/logo.jpg',
             vibrate: [200, 100, 200],
             data: { url: '/' },
