@@ -104,56 +104,59 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Fire-and-forget: cập nhật lastSeen + push notification (không chờ)
+    // Cập nhật lastSeen + push notification
     const senderName = session.user.name;
     const senderId = session.user.id;
     const msgContent = content?.trim() || '';
 
-    // Không await — chạy ngầm
-    (async () => {
-      try {
-        await prisma.user.update({ where: { id: senderId }, data: { lastSeen: new Date() } });
-      } catch {}
+    try {
+      await prisma.user.update({ where: { id: senderId }, data: { lastSeen: new Date() } });
+    } catch {}
 
-      try {
-        const webpush = require('web-push');
-        webpush.setVapidDetails(
-          'mailto:admin@dualuoitinhbien.com',
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-          process.env.VAPID_PRIVATE_KEY || ''
-        );
+    try {
+      const webpush = require('web-push');
+      webpush.setVapidDetails(
+        'mailto:admin@dualuoitinhbien.com',
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+        process.env.VAPID_PRIVATE_KEY || ''
+      );
 
-        const receiverSubs = await prisma.pushSubscription.findMany({
-          where: { userId: receiverId },
+      const receiverSubs = await prisma.pushSubscription.findMany({
+        where: { userId: receiverId },
+      });
+
+      if (receiverSubs.length > 0) {
+        const payload = JSON.stringify({
+          title: `💬 ${senderName}`,
+          options: {
+            body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
+            icon: '/logo.jpg',
+            badge: '/logo.jpg',
+            tag: `msg-${senderId}`,
+            renotify: true,
+            vibrate: [200, 100, 200],
+            data: { url: '/' },
+          },
         });
 
-        if (receiverSubs.length > 0) {
-          const payload = JSON.stringify({
-            title: `💬 ${senderName}`,
-            options: {
-              body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
-              icon: '/logo.jpg',
-              badge: '/logo.jpg',
-              tag: `msg-${senderId}`,
-              renotify: true,
-              vibrate: [200, 100, 200],
-              data: { url: '/' },
-            },
-          });
+        const results = await Promise.allSettled(
+          receiverSubs.map(sub =>
+            webpush.sendNotification({
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            }, payload)
+          )
+        );
 
-          await Promise.allSettled(
-            receiverSubs.map(sub =>
-              webpush.sendNotification({
-                endpoint: sub.endpoint,
-                keys: { p256dh: sub.p256dh, auth: sub.auth },
-              }, payload)
-            )
-          );
-        }
-      } catch (err) {
-        console.error('Push notification error:', err);
+        results.forEach((res, idx) => {
+          if (res.status === 'rejected') {
+            console.error(`Push failed for sub ${idx}:`, res.reason);
+          }
+        });
       }
-    })();
+    } catch (err) {
+      console.error('Push notification error:', err);
+    }
 
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
