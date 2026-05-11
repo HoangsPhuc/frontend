@@ -1,0 +1,161 @@
+// Prisma Schema - Quản Lý Dưa Lưới Tịnh Biên
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Giao dịch tài chính (Thu / Chi)
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String   // "THU" hoặc "CHI"
+  category    String   // Danh mục: "tien_xang", "ban_hang", "thu_no", "tra_no_vuon", "nhap_hang", "khac"
+  amount      Float    // Số tiền (luôn dương, type xác định thu/chi)
+  transferContent String?  // Nội dung chuyển khoản (thay cho mô tả cũ)
+  accountInfo     String?  // Thông tin tài khoản ngân hàng (cũ)
+  bankName        String?  // Tên ngân hàng
+  accountNumber   String?  // Số tài khoản
+  accountOwner    String?  // Tên chủ tài khoản
+  qrCodeUrl       String?  // Đường dẫn ảnh mã QR
+  note            String?  // Ghi chú thêm (tuỳ chọn)
+  date        DateTime @default(now()) // Ngày giao dịch
+  status      String   @default("APPROVED") // "PENDING", "APPROVED", "REJECTED"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Liên kết với đối tác (nếu có)
+  partnerId   String?
+  partner     Partner? @relation(fields: [partnerId], references: [id])
+
+  // Người tạo giao dịch
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  // Tài khoản nguồn/đích
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+
+  // Yêu cầu sửa đổi
+  isEditRequest         Boolean  @default(false)
+  originalTransactionId String?
+  originalTransaction   Transaction? @relation("EditRequests", fields: [originalTransactionId], references: [id])
+  editRequests          Transaction[] @relation("EditRequests")
+
+  // Tin nhắn đính kèm giao dịch
+  messages              Message[]
+}
+
+// Tài khoản nguồn tiền (Quỹ tiền mặt, Thẻ Vietcombank...)
+model BankAccount {
+  id          String   @id @default(cuid())
+  name        String   // Tên gợi nhớ (VD: "Quỹ Tiền mặt", "Vietcombank Nông trại")
+  bankName    String?  // Tên ngân hàng (nếu là tài khoản NH)
+  accountNumber String? // Số tài khoản
+  accountOwner String? // Tên chủ tài khoản
+  
+  icon        String   @default("Wallet") // Icon hiển thị
+  color       String   @default("blue") // Màu sắc hiển thị
+  initBalance Float    @default(0) // Số dư ban đầu
+  
+  transactions Transaction[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Đối tác (Khách hàng / Nhà vườn)
+model Partner {
+  id           String        @id @default(cuid())
+  name         String        // Tên đối tác
+  phone        String?       // Số điện thoại
+  type         String        // "KHACH_HANG" hoặc "NHA_VUON"
+  address      String?       // Địa chỉ
+  note         String?       // Ghi chú
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+// Người dùng hệ thống (Admin / Staff)
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Mật khẩu đã mã hoá (hashed)
+  name      String   // Tên hiển thị
+  avatarUrl String?  // Ảnh đại diện
+  coverUrl  String?  // Ảnh bìa
+  phone     String?  // Số điện thoại
+  role         String        @default("STAFF") // "ADMIN" hoặc "STAFF"
+  sessionToken String?       // Quản lý đăng nhập 1 thiết bị duy nhất
+  lastSeen     DateTime      @default(now()) // Theo dõi trạng thái online
+  createdAt    DateTime      @default(now())
+  updatedAt DateTime @updatedAt
+  transactions Transaction[]
+  pushSubscriptions PushSubscription[]
+  notifications Notification[]
+
+  // Quan hệ bạn bè
+  sentFriendRequests     Friendship[] @relation("FriendshipSender")
+  receivedFriendRequests Friendship[] @relation("FriendshipReceiver")
+
+  // Tin nhắn
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+}
+
+// Lưu trữ Push Notification Subscriptions
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+// Lịch sử thông báo
+model Notification {
+  id            String   @id @default(cuid())
+  userId        String   // Người nhận thông báo
+  user          User     @relation(fields: [userId], references: [id])
+  title         String   // Tiêu đề
+  message       String   // Nội dung
+  type          String   // "NEW_REQUEST", "APPROVED", "REJECTED"
+  transactionId String?  // ID giao dịch liên quan để ấn vào xem
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+// Quan hệ bạn bè
+model Friendship {
+  id         String   @id @default(cuid())
+  senderId   String   // Người gửi lời mời
+  sender     User     @relation("FriendshipSender", fields: [senderId], references: [id])
+  receiverId String   // Người nhận lời mời
+  receiver   User     @relation("FriendshipReceiver", fields: [receiverId], references: [id])
+  status     String   @default("PENDING") // "PENDING", "ACCEPTED", "REJECTED"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+// Tin nhắn
+model Message {
+  id            String       @id @default(cuid())
+  senderId      String
+  sender        User         @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId    String
+  receiver      User         @relation("MessageReceiver", fields: [receiverId], references: [id])
+  content       String
+  imageUrl      String?      // Ảnh đính kèm
+  transactionId String?      // Giao dịch đính kèm
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  isRead        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+}

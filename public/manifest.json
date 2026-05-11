@@ -1,0 +1,38 @@
+{
+  "name": "Dưa Lưới Tịnh Biên",
+  "short_name": "Dưa Lưới Tịnh Biên",
+  "description": "Hệ thống quản lý dòng tiền, công nợ và thu chi cho nông trại Dưa Lưới Tịnh Biên",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#4f6ef7",
+  "orientation": "portrait-primary",
+  "lang": "vi",
+  "dir": "ltr",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Thêm giao dịch",
+      "short_name": "Thêm",
+      "description": "Ghi chép giao dịch mới",
+      "url": "/?action=add",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
