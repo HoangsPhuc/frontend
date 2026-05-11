@@ -55,6 +55,43 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     };
   }, [status]);
 
+  // Tự động cấu hình lại thông báo khi đổi tài khoản (nếu máy đã cho phép trước đó)
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const autoSubscribe = async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const base64String = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+        if (!base64String) return;
+        
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: outputArray
+        });
+        
+        await fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription),
+        });
+      } catch (err) {
+        console.error('Auto-subscribe error:', err);
+      }
+    };
+    autoSubscribe();
+  }, [status]);
+
   const visibleTabs = allTabs.filter(tab => tab.roles.includes(userRole));
 
   return (

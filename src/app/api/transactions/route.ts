@@ -144,9 +144,8 @@ export async function POST(request: NextRequest) {
           title: `🔔 Yêu cầu từ ${session.user.name}`,
           options: {
             body: `Có ${pendingCount} đơn mới đang chờ duyệt!\nNội dung: ${isEditRequest ? '[YÊU CẦU SỬA] ' : ''}${transferContent || category}`,
-            icon: '/logo.jpg',
+            icon: session.user.avatarUrl || '/logo.jpg',
             badge: '/logo.jpg',
-            tag: 'pending-payment',
             vibrate: [600, 200, 600, 200, 800],
             data: { url: '/' },
             actions: [
@@ -157,7 +156,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Gửi push song song
-        await Promise.allSettled(
+        const results = await Promise.allSettled(
           adminSubscriptions.map(sub =>
             webpush.sendNotification({
               endpoint: sub.endpoint,
@@ -165,6 +164,20 @@ export async function POST(request: NextRequest) {
             }, payload)
           )
         );
+
+        for (let idx = 0; idx < results.length; idx++) {
+          const res = results[idx];
+          if (res.status === 'rejected') {
+            console.error(`Push failed for admin sub ${idx}:`, res.reason);
+            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
+              try {
+                await prisma.pushSubscription.deleteMany({
+                  where: { endpoint: adminSubscriptions[idx].endpoint }
+                });
+              } catch (delErr) {}
+            }
+          }
+        }
       } catch (err) {
         console.error('Lỗi khi gửi push notification:', err);
       }

@@ -146,11 +146,23 @@ export async function POST(request: NextRequest) {
           )
         );
 
-        results.forEach((res, idx) => {
+        for (let idx = 0; idx < results.length; idx++) {
+          const res = results[idx];
           if (res.status === 'rejected') {
             console.error(`Push failed for sub ${idx}:`, res.reason);
+            // Xóa subscription nếu token đã hết hạn hoặc bị người dùng hủy
+            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
+              try {
+                await prisma.pushSubscription.deleteMany({
+                  where: { endpoint: receiverSubs[idx].endpoint }
+                });
+                console.log(`Đã xóa subscription hết hạn của user ${receiverId}`);
+              } catch (delErr) {
+                console.error('Lỗi khi xóa subscription:', delErr);
+              }
+            }
           }
-        });
+        }
       }
     } catch (err) {
       console.error('Push notification error:', err);

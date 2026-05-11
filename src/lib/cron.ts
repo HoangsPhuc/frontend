@@ -52,7 +52,7 @@ export function initCron() {
           }
         });
 
-        await Promise.allSettled(
+        const results = await Promise.allSettled(
           adminSubscriptions.map(sub =>
             webpush.sendNotification({
               endpoint: sub.endpoint,
@@ -60,6 +60,19 @@ export function initCron() {
             }, payload)
           )
         );
+
+        for (let idx = 0; idx < results.length; idx++) {
+          const res = results[idx];
+          if (res.status === 'rejected') {
+            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
+              try {
+                await prisma.pushSubscription.deleteMany({
+                  where: { endpoint: adminSubscriptions[idx].endpoint }
+                });
+              } catch (delErr) {}
+            }
+          }
+        }
       }
     } catch (err) {
       console.error('Cron job error:', err);
