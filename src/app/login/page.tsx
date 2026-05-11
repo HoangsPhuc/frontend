@@ -61,8 +61,8 @@ export default function LoginPage() {
       {/* Top Banner Area */}
       <div className="flex-1 bg-gradient-to-br from-[var(--primary)] via-[var(--primary-dark)] to-[#3b5de7] rounded-b-[40px] flex flex-col items-center justify-center p-6 text-white shadow-xl shadow-blue-200/50 relative overflow-hidden">
         {/* Decor */}
-        <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/5 rounded-full blur-2xl" />
-        <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/5 rounded-full" />
+        <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/10 rounded-full" />
         
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }} 
