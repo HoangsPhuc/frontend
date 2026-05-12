@@ -31,6 +31,8 @@ export default function SettingsView() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === 'ADMIN';
 
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
   const [notifPermission, setNotifPermission] = useState<string>('default');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [pushTestStatus, setPushTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -44,6 +46,13 @@ export default function SettingsView() {
     const savedSound = localStorage.getItem('notification_sound');
     if (savedSound !== null) {
       setSoundEnabled(savedSound === 'true');
+    }
+    // Check if currently subscribed
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      });
     }
   }, []);
 
@@ -84,36 +93,75 @@ export default function SettingsView() {
       }
     } catch (e: any) {
       console.error('[Push] Failed to subscribe:', e);
-      alert('Lỗi đăng ký thông báo: ' + (e.message || e));
+      throw e;
+    }
+  };
+
+  const unsubscribeFromPush = async () => {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        // Hủy subscription trên trình duyệt
+        await subscription.unsubscribe();
+        // Xóa subscription trên server
+        await fetch('/api/push', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+      }
+    } catch (e: any) {
+      console.error('[Push] Failed to unsubscribe:', e);
+      throw e;
     }
   };
 
   const handleToggleNotification = async () => {
-    if (!('Notification' in window)) {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       alert('Trình duyệt của bạn không hỗ trợ thông báo.');
       return;
     }
 
-    if (notifPermission === 'granted') {
-      alert(
-        'Để tắt thông báo, bạn cần vào:\n\n' +
-        '📱 Android: Cài đặt > Ứng dụng > Trình duyệt > Thông báo\n' +
-        '💻 Chrome: Bấm biểu tượng ổ khóa 🔒 trên thanh địa chỉ > Thông báo > Chặn'
-      );
-    } else {
-      const permission = await Notification.requestPermission();
-      setNotifPermission(permission);
-      if (permission === 'granted') {
-        await subscribeToPush();
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.ready.then(reg => {
-             reg.showNotification('✅ Thông báo đã được bật!', {
-               body: 'Bạn sẽ nhận được thông báo khi có đơn mới cần duyệt.',
-               icon: '/logo.jpg',
-             });
-          });
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        // === TẮT THÔNG BÁO ===
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        // === BẬT THÔNG BÁO ===
+        if (Notification.permission === 'denied') {
+          alert(
+            'Thông báo đã bị chặn bởi trình duyệt.\n\n' +
+            '📱 Android: Bấm biểu tượng ổ khóa 🔒 trên thanh địa chỉ → Quyền → Thông báo → Cho phép\n' +
+            '🍎 iPhone: Cài đặt → Safari → Thông báo → Cho phép cho trang này'
+          );
+          return;
         }
+        
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission();
+          setNotifPermission(permission);
+          if (permission !== 'granted') return;
+        }
+        
+        await subscribeToPush();
+        setPushEnabled(true);
+        
+        // Hiện notification xác nhận
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification('✅ Thông báo đã được bật!', {
+          body: 'Bạn sẽ nhận được thông báo khi có tin nhắn hoặc đơn mới.',
+          icon: '/logo.jpg',
+        });
       }
+    } catch (e: any) {
+      alert('Lỗi: ' + (e.message || e));
+    } finally {
+      setPushLoading(false);
     }
   };
 
@@ -234,9 +282,9 @@ export default function SettingsView() {
           <div className="px-4 py-3.5 flex items-center justify-between border-b border-gray-50">
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                notifPermission === 'granted' ? 'bg-emerald-50' : 'bg-gray-100'
+                pushEnabled ? 'bg-emerald-50' : 'bg-gray-100'
               }`}>
-                {notifPermission === 'granted'
+                {pushEnabled
                   ? <Bell size={18} className="text-emerald-600" />
                   : <BellOff size={18} className="text-gray-400" />
                 }
@@ -244,11 +292,13 @@ export default function SettingsView() {
               <div>
                 <p className="text-sm font-medium text-gray-800">Thông báo đẩy</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">
-                  {notifPermission === 'granted'
-                    ? 'Đang bật — Bạn sẽ nhận thông báo khi có đơn mới'
+                  {pushLoading
+                    ? 'Đang xử lý...'
+                    : pushEnabled
+                    ? 'Đang bật — Bạn sẽ nhận thông báo khi có tin nhắn hoặc đơn mới'
                     : notifPermission === 'denied'
-                    ? 'Đã bị chặn — Vào cài đặt trình duyệt để mở lại'
-                    : 'Chưa bật — Bấm để bật thông báo'
+                    ? 'Đã bị chặn — Bấm để xem cách bật lại'
+                    : 'Đã tắt — Bấm để bật thông báo'
                   }
                 </p>
               </div>
@@ -256,20 +306,27 @@ export default function SettingsView() {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={handleToggleNotification}
+              disabled={pushLoading}
               className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${
-                notifPermission === 'granted' ? 'bg-emerald-500' : 'bg-gray-300'
-              }`}
+                pushEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+              } ${pushLoading ? 'opacity-50' : ''}`}
             >
-              <motion.div
-                animate={{ x: notifPermission === 'granted' ? 22 : 2 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm"
-              />
+              {pushLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 size={14} className="animate-spin text-white" />
+                </div>
+              ) : (
+                <motion.div
+                  animate={{ x: pushEnabled ? 22 : 2 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className="absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm"
+                />
+              )}
             </motion.button>
           </div>
 
           {/* Test Push Button */}
-          {notifPermission === 'granted' && (
+          {pushEnabled && (
             <div className="px-4 py-3.5 border-b border-gray-50">
               <button
                 onClick={handleTestPush}

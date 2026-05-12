@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
@@ -153,6 +153,9 @@ export default function ChatView() {
   const openChat = async (friend: UserItem) => {
     setChatFriend(friend);
     setChatLoading(true);
+    // Reset scroll tracking so first load always scrolls to bottom
+    prevMsgCountRef.current = 0;
+    isNearBottomRef.current = true;
     try {
       const res = await fetch(`/api/messages?friendId=${friend.id}`, { cache: 'no-store' });
       if (res.ok) {
@@ -162,7 +165,13 @@ export default function ChatView() {
         setIsTyping(data.friendTyping || false);
       }
       setUnreadMap(prev => ({ ...prev, [friend.id]: 0 }));
-    } catch { } finally { setChatLoading(false); }
+    } catch { } finally {
+      setChatLoading(false);
+      // Force scroll to bottom after loading completes
+      setTimeout(() => {
+        msgEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 50);
+    }
     // Start polling
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
@@ -180,7 +189,7 @@ export default function ChatView() {
           setIsTyping(data.friendTyping || false);
         }
       } catch { }
-    }, 800);
+    }, 3000);
   };
 
   const closeChat = () => {
@@ -460,7 +469,7 @@ export default function ChatView() {
               <p className="text-xs mt-1">Hãy gửi lời chào đầu tiên! 👋</p>
             </div>
           ) : (
-            useMemo(() => messages.map((m, i) => {
+            messages.map((m, i) => {
               const isMine = m.senderId === userId;
               const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
               const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
@@ -602,7 +611,7 @@ export default function ChatView() {
                   </div>
                 </div>
               );
-            }), [messages, userId, processingTx, rejectingTxId, rejectReason, userRole, categoryLabels])
+            })
           )}
           {isTyping && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">

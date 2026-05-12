@@ -49,44 +49,36 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     const handleRefresh = () => fetchUnread();
     window.addEventListener('refreshMessageBadge', handleRefresh);
 
+    // Instant badge update from push notification
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_RECEIVED') {
+        setUnreadMsgCount(prev => prev + 1);
+        fetchUnread();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('refreshMessageBadge', handleRefresh);
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     };
   }, [status]);
 
-  // Tự động cấu hình lại thông báo khi đổi tài khoản, SW cập nhật, hoặc app focus lại
+  // Tự động đồng bộ subscription khi SW cập nhật hoặc app focus lại
+  // CHỈ đồng bộ nếu đã có subscription, KHÔNG tạo mới (tôn trọng nút tắt của user)
   useEffect(() => {
     if (status !== 'authenticated') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const doSubscribe = async () => {
+    const syncSubscription = async () => {
       try {
         const registration = await navigator.serviceWorker.ready;
-        let subscription = await registration.pushManager.getSubscription();
-
-        // Nếu chưa có subscription hoặc subscription cũ → tạo mới
-        if (!subscription) {
-          const base64String = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
-          if (!base64String) return;
-          
-          const padding = '='.repeat((4 - base64String.length % 4) % 4);
-          const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-          const rawData = window.atob(base64);
-          const outputArray = new Uint8Array(rawData.length);
-          for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
-          }
-
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: outputArray
-          });
-        }
+        const subscription = await registration.pushManager.getSubscription();
         
+        // Chỉ đồng bộ nếu đã có subscription (user đã bật), KHÔNG tạo mới
         if (subscription) {
-          // Luôn gửi lên server để đảm bảo DB có subscription mới nhất
           await fetch('/api/push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -94,24 +86,24 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           });
         }
       } catch (err) {
-        console.error('[Push] Auto-subscribe error:', err);
+        console.error('[Push] Sync subscription error:', err);
       }
     };
 
-    // Subscribe ngay khi component mount
-    doSubscribe();
+    // Sync khi component mount
+    syncSubscription();
 
-    // Re-subscribe khi Service Worker cập nhật (subscription cũ có thể bị invalid)
+    // Re-sync khi Service Worker cập nhật
     const handleControllerChange = () => {
-      console.log('[Push] SW controller changed, re-subscribing...');
-      doSubscribe();
+      console.log('[Push] SW controller changed, syncing...');
+      syncSubscription();
     };
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
 
-    // Re-subscribe khi app quay lại foreground (subscription có thể đã hết hạn)
+    // Re-sync khi app quay lại foreground
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        doSubscribe();
+        syncSubscription();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

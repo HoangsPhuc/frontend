@@ -121,7 +121,9 @@ export default function Home() {
     // Listen for push messages from Service Worker (real-time in-app refresh)
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data?.type === 'PUSH_RECEIVED') {
-        // Ngay lập tức refresh notification count + message badge
+        // Ngay lập tức +1 badge để người dùng thấy liền
+        setUnreadCount(prev => prev + 1);
+        // Đồng thời fetch chính xác từ server
         fetchUnread();
         window.dispatchEvent(new Event('refreshMessageBadge'));
       }
