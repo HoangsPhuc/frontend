@@ -95,6 +95,8 @@ export default function ChatView() {
   useEffect(() => setMounted(true), []);
 
   const { data: session } = useSession();
+  const userId = session?.user?.id;
+  const userRole = session?.user?.role;
   const [tab, setTab] = useState<'chats' | 'friends' | 'find'>('chats');
   const [friends, setFriends] = useState<UserItem[]>([]);
   const [pendingReceived, setPendingReceived] = useState<UserItem[]>([]);
@@ -461,7 +463,6 @@ export default function ChatView() {
   };
 
   const totalUnread = Object.values(unreadMap).reduce((a, b) => a + b, 0);
-  const userId = session?.user?.id;
 
   // Memoize rendered messages to prevent re-rendering the entire list on every keystroke
   const renderedMessages = useMemo(() => {
