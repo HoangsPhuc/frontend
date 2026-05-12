@@ -685,7 +685,7 @@ export default function ChatView() {
   if (chatFriend) {
     const online = isOnline(chatFriend.lastSeen);
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-10 flex flex-col bg-gray-50 pb-[calc(58px+env(safe-area-inset-bottom))]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="no-swipe absolute inset-0 z-10 flex flex-col bg-gray-50 pb-[calc(58px+env(safe-area-inset-bottom))]">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm">
           <button onClick={closeChat} className="p-2 -ml-2 rounded-xl hover:bg-gray-100 text-gray-600"><ArrowLeft size={20} /></button>
