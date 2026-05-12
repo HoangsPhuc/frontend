@@ -156,12 +156,18 @@ export default function ChatView() {
     fetch('/api/friends/auto', { method: 'POST' }).catch(() => { });
   }, []);
 
+  // Scroll down button states
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [unreadBelow, setUnreadBelow] = useState(0);
+
   const openChat = async (friend: UserItem) => {
     setChatFriend(friend);
     setChatLoading(true);
     // Reset scroll tracking so first load always scrolls to bottom
     prevMsgCountRef.current = 0;
     isNearBottomRef.current = true;
+    setShowScrollDown(false);
+    setUnreadBelow(0);
     try {
       const res = await fetch(`/api/messages?friendId=${friend.id}`, { cache: 'no-store' });
       if (res.ok) {
@@ -219,10 +225,6 @@ export default function ChatView() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const prevMsgCountRef = useRef(0);
   const isNearBottomRef = useRef(true);
-
-  // Scroll down button states
-  const [showScrollDown, setShowScrollDown] = useState(false);
-  const [unreadBelow, setUnreadBelow] = useState(0);
 
   // Track scroll position
   const handleChatScroll = () => {
@@ -490,6 +492,11 @@ export default function ChatView() {
                     alt={isSticker ? "Sticker" : "Ảnh"}
                     className={isSticker ? "w-28 h-28 object-contain filter drop-shadow-md" : "rounded-xl max-h-52 w-full object-cover cursor-pointer"}
                     onClick={() => { if (!isSticker) setLightboxImg(m.imageUrl!) }}
+                    onLoad={() => {
+                      if (isNearBottomRef.current) {
+                        msgEndRef.current?.scrollIntoView({ behavior: 'instant' });
+                      }
+                    }}
                   />
                 </div>
               )}
