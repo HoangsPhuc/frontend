@@ -185,6 +185,13 @@ export default function TransactionForm({
     }
   }, [step]);
 
+  // Scroll focused input into view when virtual keyboard opens
+  const scrollToFocused = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
   const goNext = () => {
     if (step === 2) {
       const bName = bankName.trim();
@@ -330,7 +337,7 @@ export default function TransactionForm({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 1 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="no-swipe fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-3xl flex flex-col h-[92dvh] md:h-auto md:max-h-[90vh] md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md md:rounded-3xl shadow-2xl"
+            className="no-swipe fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-3xl flex flex-col h-[92vh] md:h-auto md:max-h-[90vh] md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md md:rounded-3xl shadow-2xl"
           >
             {/* Handle bar */}
             <div className="flex justify-center pt-3 pb-1 shrink-0 md:hidden">
@@ -401,7 +408,7 @@ export default function TransactionForm({
                     animate="center"
                     exit="exit"
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute inset-0 px-5 pt-6 overflow-y-auto pb-32 md:pb-6 md:relative md:inset-auto"
+                    className="absolute inset-0 px-5 pt-6 overflow-y-auto pb-44 md:pb-6 md:relative md:inset-auto"
                   >
                     {/* Type Toggle */}
                     {/* Type Toggle */}
@@ -523,7 +530,7 @@ export default function TransactionForm({
                     animate="center"
                     exit="exit"
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute inset-0 px-5 pt-6 flex flex-col pb-32 md:pb-6 md:relative md:inset-auto md:min-h-[400px]"
+                    className="absolute inset-0 px-5 pt-6 flex flex-col pb-44 md:pb-6 md:relative md:inset-auto md:min-h-[400px]"
                   >
                     {/* Big amount display */}
                     <div className="flex-1 flex flex-col items-center justify-center">
@@ -541,6 +548,7 @@ export default function TransactionForm({
                           inputMode="numeric"
                           value={amount ? formatCurrency(amount) : ''}
                           onChange={(e) => handleAmountChange(e.target.value)}
+                          onFocus={scrollToFocused}
                           placeholder="0"
                           className={`text-center text-4xl font-bold bg-transparent outline-none w-full placeholder:text-gray-200 ${type === 'THU' ? 'text-emerald-600' : 'text-red-500'
                             }`}
@@ -564,7 +572,7 @@ export default function TransactionForm({
                     animate="center"
                     exit="exit"
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute inset-0 px-5 pt-6 overflow-y-auto pb-32 md:pb-6 md:relative md:inset-auto md:max-h-[70vh]"
+                    className="absolute inset-0 px-5 pt-6 overflow-y-auto pb-44 md:pb-6 md:relative md:inset-auto md:max-h-[70vh]"
                   >
                     <div className="space-y-5">
                       {/* 1. Nguồn tiền hệ thống (Ví của mình) */}
@@ -608,6 +616,7 @@ export default function TransactionForm({
                             type="text"
                             value={bankName}
                             onChange={(e) => setBankName(e.target.value)}
+                            onFocus={scrollToFocused}
                             placeholder="Tên Ngân Hàng (VD: Vietcombank)"
                             className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all placeholder:text-gray-400"
                           />
@@ -615,6 +624,7 @@ export default function TransactionForm({
                             type="text"
                             value={accountNumber}
                             onChange={(e) => setAccountNumber(e.target.value)}
+                            onFocus={scrollToFocused}
                             placeholder="Số Tài Khoản (VD: 0123456789)"
                             className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all placeholder:text-gray-400"
                           />
@@ -622,6 +632,7 @@ export default function TransactionForm({
                             type="text"
                             value={accountOwner}
                             onChange={(e) => setAccountOwner(e.target.value)}
+                            onFocus={scrollToFocused}
                             placeholder="Tên Chủ Tài Khoản (VD: NGUYEN VAN A)"
                             className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all placeholder:text-gray-400"
                           />
@@ -670,6 +681,7 @@ export default function TransactionForm({
                           type="text"
                           value={transferContent}
                           onChange={(e) => setTransferContent(e.target.value)}
+                          onFocus={scrollToFocused}
                           placeholder="VD: Tra tien nhap hang"
                           className="w-full px-4 py-4 rounded-2xl border-2 border-gray-200 bg-gray-50/50 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all placeholder:text-gray-300"
                         />
@@ -698,6 +710,7 @@ export default function TransactionForm({
                         <textarea
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
+                          onFocus={scrollToFocused}
                           placeholder="Ghi chú thêm nếu cần..."
                           rows={3}
                           className="w-full px-4 py-4 rounded-2xl border-2 border-gray-200 bg-gray-50/50 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none placeholder:text-gray-300"
@@ -717,7 +730,7 @@ export default function TransactionForm({
                     animate="center"
                     exit="exit"
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute inset-0 px-5 pt-6 pb-32 md:pb-6 md:relative md:inset-auto md:max-h-[70vh] overflow-y-auto"
+                    className="absolute inset-0 px-5 pt-6 pb-44 md:pb-6 md:relative md:inset-auto md:max-h-[70vh] overflow-y-auto"
                   >
                     <div className="flex flex-col items-center">
                       {/* Big icon */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
@@ -460,7 +460,7 @@ export default function ChatView() {
               <p className="text-xs mt-1">Hãy gửi lời chào đầu tiên! 👋</p>
             </div>
           ) : (
-            messages.map((m, i) => {
+            useMemo(() => messages.map((m, i) => {
               const isMine = m.senderId === userId;
               const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
               const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
@@ -602,7 +602,7 @@ export default function ChatView() {
                   </div>
                 </div>
               );
-            })
+            }), [messages, userId, processingTx, rejectingTxId, rejectReason, userRole, categoryLabels])
           )}
           {isTyping && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
@@ -767,7 +767,14 @@ export default function ChatView() {
               value={newMsg}
               onChange={handleTyping}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              onFocus={() => { setShowAttach(false); setShowStickers(false); }}
+              onFocus={() => {
+                setShowAttach(false);
+                setShowStickers(false);
+                // Scroll chat to bottom when keyboard opens
+                setTimeout(() => {
+                  msgEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
+              }}
               placeholder="Nhập tin nhắn..."
               className="flex-1 px-4 py-3 rounded-2xl bg-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:bg-white transition-all"
             />

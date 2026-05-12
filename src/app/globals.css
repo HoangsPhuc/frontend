@@ -44,6 +44,8 @@
 html {
   scroll-behavior: smooth;
   overscroll-behavior: none;
+  /* Prevent layout shift when virtual keyboard opens */
+  height: 100%;
 }
 
 body {
@@ -53,6 +55,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: contain;
+  /* Prevent body from resizing when keyboard opens */
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+/* Ensure focused inputs scroll into view smoothly */
+input:focus, textarea:focus, select:focus {
+  scroll-margin-bottom: 120px;
 }
 
 ::-webkit-scrollbar {

@@ -171,7 +171,7 @@ export default function Home() {
   };
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center h-dvh bg-[var(--background)]">
+      <div className="flex items-center justify-center h-screen bg-[var(--background)]">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -182,7 +182,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-dvh bg-[var(--background)] text-gray-900">
+    <div className="flex flex-col h-screen bg-[var(--background)] text-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex items-center justify-between">
