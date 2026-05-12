@@ -79,6 +79,7 @@ export default function Home() {
     : ['dashboard', 'chat', 'more'];
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const noSwipeRef = useRef(false);
 
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [touchY, setTouchY] = useState(0);
@@ -151,10 +152,12 @@ export default function Home() {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setTouchY(e.touches[0].clientY);
+    // Ghi nhớ xem touch bắt đầu trong vùng no-swipe hay không
+    noSwipeRef.current = !!(e.target as HTMLElement).closest('.no-swipe');
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('.no-swipe')) return;
+    if (noSwipeRef.current) return;
     const touchMoveX = e.touches[0].clientX;
     const touchMoveY = e.touches[0].clientY;
     const diffX = touchStartX.current - touchMoveX;
@@ -167,7 +170,7 @@ export default function Home() {
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     setSwipeOffset(0);
-    if ((e.target as HTMLElement).closest('.no-swipe')) return;
+    if (noSwipeRef.current) return;
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const diffX = touchStartX.current - touchEndX;
