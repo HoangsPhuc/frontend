@@ -295,7 +295,7 @@ export default function SettingsView() {
                   {pushLoading
                     ? 'Đang xử lý...'
                     : pushEnabled
-                    ? 'Đang bật — Bạn sẽ nhận thông báo khi có tin nhắn hoặc đơn mới'
+                    ? 'Đang bật — Nhận thông báo tin nhắn, duyệt đơn'
                     : notifPermission === 'denied'
                     ? 'Đã bị chặn — Bấm để xem cách bật lại'
                     : 'Đã tắt — Bấm để bật thông báo'
@@ -309,19 +309,13 @@ export default function SettingsView() {
               disabled={pushLoading}
               className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${
                 pushEnabled ? 'bg-emerald-500' : 'bg-gray-300'
-              } ${pushLoading ? 'opacity-50' : ''}`}
+              }`}
             >
-              {pushLoading ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 size={14} className="animate-spin text-white" />
-                </div>
-              ) : (
-                <motion.div
-                  animate={{ x: pushEnabled ? 22 : 2 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  className="absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm"
-                />
-              )}
+              <motion.div
+                animate={{ x: pushEnabled ? 22 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className={`absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-sm ${pushLoading ? 'opacity-50' : ''}`}
+              />
             </motion.button>
           </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
@@ -10,7 +10,7 @@ import {
   MessageCircle, Users, UserPlus, Search, Send, ArrowLeft, Check, X,
   Clock, CheckCheck, Circle, Shield, ChevronRight, UserCheck, Loader2,
   Paperclip, Image as ImageIcon, FileText, ArrowUpCircle, ArrowDownCircle,
-  Eye, Smile
+  Eye, Smile, UserMinus, ArrowDown
 } from 'lucide-react';
 
 interface UserItem {
@@ -123,6 +123,10 @@ export default function ChatView() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const sendingRef = useRef(false);
+
+  // Custom confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   const fetchFriends = useCallback(async () => {
     try {
@@ -214,12 +218,25 @@ export default function ChatView() {
   const prevMsgCountRef = useRef(0);
   const isNearBottomRef = useRef(true);
 
+  // Scroll down button states
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [unreadBelow, setUnreadBelow] = useState(0);
+
   // Track scroll position
   const handleChatScroll = () => {
     const el = chatContainerRef.current;
     if (!el) return;
-    const threshold = 100;
-    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    const threshold = 150;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    isNearBottomRef.current = isNearBottom;
+    setShowScrollDown(!isNearBottom);
+    if (isNearBottom) setUnreadBelow(0);
+  };
+
+  const scrollToBottom = () => {
+    msgEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setUnreadBelow(0);
+    setShowScrollDown(false);
   };
 
   // Smart scroll: only auto-scroll if near bottom or new message count increased
@@ -227,11 +244,20 @@ export default function ChatView() {
     const newCount = messages.length;
     const oldCount = prevMsgCountRef.current;
 
-    if (newCount > oldCount && (isNearBottomRef.current || oldCount === 0)) {
-      msgEndRef.current?.scrollIntoView({ behavior: oldCount === 0 ? 'instant' : 'smooth' });
+    if (newCount > oldCount) {
+      if (isNearBottomRef.current || oldCount === 0) {
+        msgEndRef.current?.scrollIntoView({ behavior: oldCount === 0 ? 'instant' : 'smooth' });
+      } else {
+        // Scrolled up, increment unread count for messages NOT from me
+        const newMsgs = messages.slice(oldCount);
+        const newFromOthers = newMsgs.filter(m => m.senderId !== userId).length;
+        if (newFromOthers > 0) {
+          setUnreadBelow(prev => prev + newFromOthers);
+        }
+      }
     }
     prevMsgCountRef.current = newCount;
-  }, [messages]);
+  }, [messages, userId]);
 
   useEffect(() => {
     if (isTyping && isNearBottomRef.current) {
@@ -270,10 +296,12 @@ export default function ChatView() {
   };
 
   const sendMessage = async (extra?: { imageUrl?: string; transactionId?: string }) => {
-    if (!chatFriend || sending) return;
+    if (!chatFriend || sending || sendingRef.current) return;
     if (!newMsg.trim() && !extra?.imageUrl && !extra?.transactionId) return;
     const content = newMsg.trim();
     setNewMsg('');
+    setSending(true);
+    sendingRef.current = true;
     if (lastTypingTime.current > 0) {
       lastTypingTime.current = 0;
       fetch('/api/messages/typing', {
@@ -295,7 +323,6 @@ export default function ChatView() {
     };
 
     setMessages(prev => [...prev, optimisticMsg]);
-    setSending(true);
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -315,7 +342,7 @@ export default function ChatView() {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
       alert('Lỗi kết nối khi gửi tin nhắn');
       setNewMsg(content);
-    } finally { setSending(false); setShowAttach(false); inputRef.current?.focus(); }
+    } finally { setSending(false); sendingRef.current = false; setShowAttach(false); inputRef.current?.focus(); }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,21 +440,176 @@ export default function ChatView() {
   };
 
   const cancelOrUnfriend = async (friendshipId: string, name: string, isUnfriend: boolean) => {
-    const msg = isUnfriend
-      ? `Bạn có chắc chắn muốn XÓA BẠN với ${name} không?\n\nHành động này không thể hoàn tác, bạn sẽ không thể tiếp tục nhắn tin với người này.`
-      : `Bạn có chắc chắn muốn HỦY lời mời kết bạn gửi đến ${name} không?`;
-    if (!confirm(msg)) return;
-    try {
-      await fetch(`/api/friends?friendshipId=${friendshipId}`, { method: 'DELETE' });
-      fetchFriends();
-      if (chatFriend && chatFriend.friendshipId === friendshipId) {
-        closeChat();
+    const title = isUnfriend ? 'Xóa bạn bè' : 'Hủy lời mời';
+    const message = isUnfriend
+      ? `Bạn có chắc chắn muốn xóa bạn với ${name}?\nHành động này không thể hoàn tác, bạn sẽ không thể tiếp tục nhắn tin với người này.`
+      : `Bạn có chắc chắn muốn hủy lời mời kết bạn đã gửi đến ${name}?`;
+    setConfirmModal({
+      title,
+      message,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await fetch(`/api/friends?friendshipId=${friendshipId}`, { method: 'DELETE' });
+          fetchFriends();
+          if (chatFriend && chatFriend.friendshipId === friendshipId) {
+            closeChat();
+          }
+        } catch { }
       }
-    } catch { }
+    });
   };
 
   const totalUnread = Object.values(unreadMap).reduce((a, b) => a + b, 0);
   const userId = session?.user?.id;
+  const userRole = session?.user?.role;
+
+  // Memoize rendered messages to prevent re-rendering the entire list on every keystroke
+  const renderedMessages = useMemo(() => {
+    return messages.map((m, i) => {
+      const isMine = m.senderId === userId;
+      const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
+      const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
+      return (
+        <div key={m.id}>
+          {showTime && (
+            <p className="text-center text-[10px] text-gray-400 my-1.5 font-medium">
+              {new Date(m.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+            </p>
+          )}
+          <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden ${isSticker ? 'bg-transparent shadow-none' :
+              isMine
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
+                : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-md'
+              }`}>
+              {/* Ảnh đính kèm */}
+              {m.imageUrl && (
+                <div className={isSticker ? `flex flex-col items-${isMine ? 'end' : 'start'}` : "p-1"}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={m.imageUrl}
+                    alt={isSticker ? "Sticker" : "Ảnh"}
+                    className={isSticker ? "w-28 h-28 object-contain filter drop-shadow-md" : "rounded-xl max-h-52 w-full object-cover cursor-pointer"}
+                    onClick={() => { if (!isSticker) setLightboxImg(m.imageUrl!) }}
+                  />
+                </div>
+              )}
+              {/* Giao dịch đính kèm */}
+              {m.transaction && (
+                <div className={`mx-2 mt-2 p-3.5 rounded-2xl border w-64 max-w-[85vw] shadow-md relative overflow-hidden ${isMine
+                  ? 'border-blue-400 text-white'
+                  : 'border-orange-200 text-gray-900'
+                  }`}>
+                  <div
+                    className="absolute inset-0 z-0 bg-cover bg-center mix-blend-multiply"
+                    style={{ backgroundImage: "url('/melon_tx_bg.png')", opacity: isMine ? 0.35 : 0.15 }}
+                  />
+                  <div className={`absolute inset-0 z-0 ${isMine ? 'bg-gradient-to-br from-blue-500/85 to-indigo-600/90' : 'bg-gradient-to-br from-amber-50/90 to-orange-100/80'
+                    }`} />
+                  <div className={`absolute -right-4 -top-4 opacity-10 pointer-events-none z-0 ${isMine ? 'text-white' : 'text-orange-600'}`}>
+                    <FileText size={80} />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        {m.transaction.type === 'CHI'
+                          ? <div className={`p-1 rounded-md ${isMine ? 'bg-white/20 text-white' : 'bg-red-100 text-red-500'}`}><ArrowUpCircle size={14} /></div>
+                          : <div className={`p-1 rounded-md ${isMine ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-500'}`}><ArrowDownCircle size={14} /></div>
+                        }
+                        <span className={`text-xs font-bold ${isMine ? 'text-white' : 'text-gray-900'}`}>
+                          {categoryLabels[m.transaction.category] || m.transaction.category}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold text-white shadow-sm whitespace-nowrap ${m.transaction.status === 'PENDING' ? 'bg-amber-500'
+                        : m.transaction.status === 'APPROVED' ? 'bg-emerald-500'
+                          : 'bg-red-500'
+                        }`}>
+                        {m.transaction.status === 'PENDING' ? 'Chờ duyệt' : m.transaction.status === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
+                      </span>
+                    </div>
+                    <p className={`text-base font-extrabold ${isMine ? 'text-white' : 'text-orange-600'}`}>
+                      {Number(m.transaction.amount).toLocaleString('vi-VN')}đ
+                    </p>
+                    {m.transaction.transferContent && (
+                      <p className={`text-[11px] mt-1 line-clamp-2 ${isMine ? 'text-blue-100' : 'text-gray-600'}`}>
+                        {m.transaction.transferContent}
+                      </p>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDetailTx(m.transaction); }}
+                      className={`flex items-center gap-1 text-[10px] mt-1.5 font-medium transition-colors ${isMine ? 'text-blue-100 hover:text-white' : 'text-blue-500 hover:text-blue-700'}`}
+                    >
+                      <Eye size={12} /> Xem chi tiết giao dịch
+                    </button>
+                    {/* Nút Duyệt / Từ chối cho Admin */}
+                    {userRole === 'ADMIN' && m.transaction.status === 'PENDING' && (
+                      <div className="flex gap-2 mt-2.5 pt-2 border-t border-dashed" style={{ borderColor: isMine ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)' }}>
+                        {processingTx === m.transaction.id ? (
+                          <div className="flex items-center gap-1.5 text-xs"><Loader2 size={12} className="animate-spin" /> Đang xử lý...</div>
+                        ) : rejectingTxId === m.transaction.id ? (
+                          <div className="flex-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              autoFocus
+                              value={rejectReason}
+                              onChange={e => setRejectReason(e.target.value)}
+                              placeholder="Nhập lý do từ chối..."
+                              className="w-full text-xs px-2 py-1.5 rounded bg-white border border-red-200 text-gray-900 focus:outline-none focus:border-red-400"
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleTxAction(m.transaction!.id, 'REJECTED')}
+                                disabled={!rejectReason.trim()}
+                                className="flex-1 py-1 rounded bg-red-500 text-white text-[10px] font-bold disabled:opacity-50 transition-colors"
+                              >
+                                Xác nhận
+                              </button>
+                              <button
+                                onClick={() => { setRejectingTxId(null); setRejectReason(''); }}
+                                className="flex-1 py-1 rounded bg-gray-200 text-gray-700 text-[10px] font-bold hover:bg-gray-300 transition-colors"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleTxAction(m.transaction!.id, 'APPROVED'); }}
+                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 ${isMine ? 'bg-emerald-500/80 text-white hover:bg-emerald-500' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm'
+                                }`}
+                            >
+                              <Check size={12} /> Duyệt
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setRejectingTxId(m.transaction!.id); setRejectReason(''); }}
+                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 ${isMine ? 'bg-red-500/80 text-white hover:bg-red-500' : 'bg-red-500 text-white hover:bg-red-600 shadow-sm'
+                                }`}
+                            >
+                              <X size={12} /> Từ chối
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Nội dung text */}
+              {m.content && <div className="px-3.5 pt-2 pb-0.5 leading-relaxed whitespace-pre-wrap break-words">{m.content}</div>}
+              {!m.content && (m.imageUrl || m.transaction) && <div className="h-1" />}
+              <div className={`flex items-center gap-1 px-3.5 pb-1.5 pt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                <span className={`text-[10px] font-medium ${isSticker ? 'text-gray-400' : isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+                  {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {isMine && !isSticker && (m.isRead ? <CheckCheck size={12} className="text-blue-200" /> : <Check size={12} className="text-blue-300" />)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    });
+  }, [messages, userId, processingTx, rejectingTxId, rejectReason, userRole, categoryLabels]);
 
   // ═══ CHAT VIEW ═══
   if (chatFriend) {
@@ -468,151 +650,7 @@ export default function ChatView() {
               <p className="text-sm">Chưa có tin nhắn nào</p>
               <p className="text-xs mt-1">Hãy gửi lời chào đầu tiên! 👋</p>
             </div>
-          ) : (
-            messages.map((m, i) => {
-              const isMine = m.senderId === userId;
-              const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
-              const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
-              return (
-                <div key={m.id}>
-                  {showTime && (
-                    <p className="text-center text-[10px] text-gray-400 my-1.5 font-medium">
-                      {new Date(m.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
-                    </p>
-                  )}
-                  <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden ${isSticker ? 'bg-transparent shadow-none' :
-                      isMine
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
-                        : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-md'
-                      }`}>
-                      {/* Ảnh đính kèm */}
-                      {m.imageUrl && (
-                        <div className={isSticker ? `flex flex-col items-${isMine ? 'end' : 'start'}` : "p-1"}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={m.imageUrl}
-                            alt={isSticker ? "Sticker" : "Ảnh"}
-                            className={isSticker ? "w-28 h-28 object-contain filter drop-shadow-md" : "rounded-xl max-h-52 w-full object-cover cursor-pointer"}
-                            onClick={() => { if (!isSticker) setLightboxImg(m.imageUrl!) }}
-                          />
-                        </div>
-                      )}
-                      {/* Giao dịch đính kèm */}
-                      {m.transaction && (
-                        <div className={`mx-2 mt-2 p-3.5 rounded-2xl border w-64 max-w-[85vw] shadow-md relative overflow-hidden ${isMine
-                          ? 'border-blue-400 text-white'
-                          : 'border-orange-200 text-gray-900'
-                          }`}>
-                          <div
-                            className="absolute inset-0 z-0 bg-cover bg-center mix-blend-multiply"
-                            style={{ backgroundImage: "url('/melon_tx_bg.png')", opacity: isMine ? 0.35 : 0.15 }}
-                          />
-                          <div className={`absolute inset-0 z-0 ${isMine ? 'bg-gradient-to-br from-blue-500/85 to-indigo-600/90' : 'bg-gradient-to-br from-amber-50/90 to-orange-100/80'
-                            }`} />
-                          <div className={`absolute -right-4 -top-4 opacity-10 pointer-events-none z-0 ${isMine ? 'text-white' : 'text-orange-600'}`}>
-                            <FileText size={80} />
-                          </div>
-                          <div className="relative z-10">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <div className="flex items-center gap-1.5">
-                                {m.transaction.type === 'CHI'
-                                  ? <div className={`p-1 rounded-md ${isMine ? 'bg-white/20 text-white' : 'bg-red-100 text-red-500'}`}><ArrowUpCircle size={14} /></div>
-                                  : <div className={`p-1 rounded-md ${isMine ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-500'}`}><ArrowDownCircle size={14} /></div>
-                                }
-                                <span className={`text-xs font-bold ${isMine ? 'text-white' : 'text-gray-900'}`}>
-                                  {categoryLabels[m.transaction.category] || m.transaction.category}
-                                </span>
-                              </div>
-                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold text-white shadow-sm whitespace-nowrap ${m.transaction.status === 'PENDING' ? 'bg-amber-500'
-                                : m.transaction.status === 'APPROVED' ? 'bg-emerald-500'
-                                  : 'bg-red-500'
-                                }`}>
-                                {m.transaction.status === 'PENDING' ? 'Chờ duyệt' : m.transaction.status === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
-                              </span>
-                            </div>
-                            <p className={`text-base font-extrabold ${isMine ? 'text-white' : 'text-orange-600'}`}>
-                              {Number(m.transaction.amount).toLocaleString('vi-VN')}đ
-                            </p>
-                            {m.transaction.transferContent && (
-                              <p className={`text-[11px] mt-1 line-clamp-2 ${isMine ? 'text-blue-100' : 'text-gray-600'}`}>
-                                {m.transaction.transferContent}
-                              </p>
-                            )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDetailTx(m.transaction); }}
-                              className={`flex items-center gap-1 text-[10px] mt-1.5 font-medium transition-colors ${isMine ? 'text-blue-100 hover:text-white' : 'text-blue-500 hover:text-blue-700'}`}
-                            >
-                              <Eye size={12} /> Xem chi tiết giao dịch
-                            </button>
-                            {/* Nút Duyệt / Từ chối cho Admin */}
-                            {userRole === 'ADMIN' && m.transaction.status === 'PENDING' && (
-                              <div className="flex gap-2 mt-2.5 pt-2 border-t border-dashed" style={{ borderColor: isMine ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)' }}>
-                                {processingTx === m.transaction.id ? (
-                                  <div className="flex items-center gap-1.5 text-xs"><Loader2 size={12} className="animate-spin" /> Đang xử lý...</div>
-                                ) : rejectingTxId === m.transaction.id ? (
-                                  <div className="flex-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <input
-                                      autoFocus
-                                      value={rejectReason}
-                                      onChange={e => setRejectReason(e.target.value)}
-                                      placeholder="Nhập lý do từ chối..."
-                                      className="w-full text-xs px-2 py-1.5 rounded bg-white border border-red-200 text-gray-900 focus:outline-none focus:border-red-400"
-                                    />
-                                    <div className="flex gap-1.5">
-                                      <button
-                                        onClick={() => handleTxAction(m.transaction!.id, 'REJECTED')}
-                                        disabled={!rejectReason.trim()}
-                                        className="flex-1 py-1 rounded bg-red-500 text-white text-[10px] font-bold disabled:opacity-50 transition-colors"
-                                      >
-                                        Xác nhận
-                                      </button>
-                                      <button
-                                        onClick={() => { setRejectingTxId(null); setRejectReason(''); }}
-                                        className="flex-1 py-1 rounded bg-gray-200 text-gray-700 text-[10px] font-bold hover:bg-gray-300 transition-colors"
-                                      >
-                                        Hủy
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleTxAction(m.transaction!.id, 'APPROVED'); }}
-                                      className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 ${isMine ? 'bg-emerald-500/80 text-white hover:bg-emerald-500' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm'
-                                        }`}
-                                    >
-                                      <Check size={12} /> Duyệt
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setRejectingTxId(m.transaction!.id); setRejectReason(''); }}
-                                      className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 ${isMine ? 'bg-red-500/80 text-white hover:bg-red-500' : 'bg-red-500 text-white hover:bg-red-600 shadow-sm'
-                                        }`}
-                                    >
-                                      <X size={12} /> Từ chối
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {/* Nội dung text */}
-                      {m.content && <div className="px-3.5 pt-2 pb-0.5 leading-relaxed whitespace-pre-wrap break-words">{m.content}</div>}
-                      {!m.content && (m.imageUrl || m.transaction) && <div className="h-1" />}
-                      <div className={`flex items-center gap-1 px-3.5 pb-1.5 pt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <span className={`text-[10px] font-medium ${isSticker ? 'text-gray-400' : isMine ? 'text-blue-100' : 'text-gray-500'}`}>
-                          {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {isMine && !isSticker && (m.isRead ? <CheckCheck size={12} className="text-blue-200" /> : <Check size={12} className="text-blue-300" />)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+          ) : renderedMessages}
           {isTyping && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
               <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5 max-w-[80%]">
@@ -624,6 +662,30 @@ export default function ChatView() {
           )}
           <div ref={msgEndRef} />
         </div>
+
+        {/* Scroll down button */}
+        <AnimatePresence>
+          {showScrollDown && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              className="absolute bottom-20 right-4 z-20"
+            >
+              <button
+                onClick={scrollToBottom}
+                className="w-10 h-10 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center text-gray-500 hover:text-blue-500 hover:bg-blue-50 transition-colors active:scale-95"
+              >
+                <ArrowDown size={20} />
+                {unreadBelow > 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-sm">
+                    {unreadBelow > 9 ? '9+' : unreadBelow}
+                  </div>
+                )}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Transaction Picker Modal */}
         {mounted && createPortal(
@@ -722,26 +784,29 @@ export default function ChatView() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 350, mass: 0.8 }}
-                className="absolute bottom-full left-4 mb-2 p-3 bg-white rounded-3xl shadow-xl border border-gray-100 z-20 w-[300px]"
+                className="absolute bottom-full left-4 right-4 mb-2 p-2.5 bg-white rounded-3xl shadow-xl border border-gray-100 z-20"
                 style={{ transformOrigin: 'bottom left' }}
               >
-                <div className="grid grid-cols-4 gap-1.5 overflow-y-auto max-h-[250px] pr-1 relative z-30">
+                <div className="grid grid-cols-6 gap-1 overflow-y-auto max-h-[220px] overscroll-contain">
                   {STICKERS.map((stickerUrl, idx) => (
                     <button
                       key={idx}
-                      onClick={() => {
+                      onPointerUp={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (sendingRef.current) return;
                         setShowStickers(false);
                         sendMessage({ imageUrl: stickerUrl });
                       }}
-                      className="aspect-square p-2 rounded-2xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-all active:scale-90"
+                      className="w-full aspect-square p-1.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={stickerUrl}
                         alt="sticker"
-                        loading="lazy"
+                        loading="eager"
                         decoding="async"
-                        className="w-full h-full object-contain"
+                        className="w-10 h-10 object-contain pointer-events-none"
                       />
                     </button>
                   ))}
@@ -1169,9 +1234,52 @@ export default function ChatView() {
         </div>
       )}
 
-      {viewProfileId && (
-        <ProfileModal isOpen={true} onClose={() => setViewProfileId(null)} userId={viewProfileId} />
-      )}
+      <ProfileModal 
+        isOpen={!!viewProfileId} 
+        onClose={() => setViewProfileId(null)} 
+        userId={viewProfileId || undefined} 
+      />
+
+      {/* Confirm Modal */}
+      <AnimatePresence>
+        {confirmModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-[320px] shadow-2xl overflow-hidden"
+            >
+              <div className="p-5 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-3">
+                  <UserMinus size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{confirmModal.title}</h3>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">{confirmModal.message}</p>
+              </div>
+              <div className="flex border-t border-gray-100">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="flex-1 py-3.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors border-r border-gray-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

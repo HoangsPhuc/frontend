@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { sendPushToUser } from '@/lib/pushHelper';
 
 const categoryLabels: Record<string, string> = {
   ban_hang: 'Bán hàng',
@@ -72,6 +73,17 @@ export async function PUT(
                 transactionId: existing.originalTransactionId,
               }
             });
+            // Push notification cho nhân viên
+            sendPushToUser(existing.userId, {
+              title: '✅ Đề xuất sửa đã được duyệt',
+              options: {
+                body: `Yêu cầu sửa giao dịch ${existing.transferContent || categoryLabels[existing.category] || existing.category} đã được duyệt.`,
+                icon: '/logo.jpg',
+                badge: '/logo.jpg',
+                tag: 'tx-approved-' + id,
+                vibrate: [200, 100, 200],
+              }
+            }).catch(e => console.error('[Push] Error sending edit approved push:', e));
           }
           // Xóa yêu cầu sửa
           await prisma.transaction.delete({ where: { id } });
@@ -92,6 +104,17 @@ export async function PUT(
               type: 'REJECTED',
             }
           });
+          // Push notification cho nhân viên
+          sendPushToUser(existing.userId, {
+            title: '❌ Đề xuất sửa bị từ chối',
+            options: {
+              body: `Yêu cầu sửa giao dịch ${existing.transferContent || categoryLabels[existing.category] || existing.category} bị từ chối.${rejectReason ? ' Lý do: ' + rejectReason : ''}`,
+              icon: '/logo.jpg',
+              badge: '/logo.jpg',
+              tag: 'tx-rejected-' + id,
+              vibrate: [200, 100, 200],
+            }
+          }).catch(e => console.error('[Push] Error sending edit rejected push:', e));
         }
         // Từ chối thì xóa yêu cầu sửa
         await prisma.transaction.delete({ where: { id } });
@@ -130,6 +153,19 @@ export async function PUT(
           transactionId: status === 'APPROVED' ? transaction.id : null,
         }
       });
+      // Push notification cho nhân viên
+      const pushTitle = status === 'APPROVED' ? '✅ Giao dịch đã được duyệt' : '❌ Giao dịch bị từ chối';
+      const pushBody = `${transaction.transferContent || categoryLabels[transaction.category] || transaction.category} (${transaction.amount.toLocaleString('vi-VN')}đ)${status === 'REJECTED' && rejectReason ? '\nLý do: ' + rejectReason : ''}`;
+      sendPushToUser(transaction.userId, {
+        title: pushTitle,
+        options: {
+          body: pushBody,
+          icon: '/logo.jpg',
+          badge: '/logo.jpg',
+          tag: `tx-${status.toLowerCase()}-${id}`,
+          vibrate: [200, 100, 200],
+        }
+      }).catch(e => console.error('[Push] Error sending tx status push:', e));
     }
 
     return NextResponse.json(transaction);

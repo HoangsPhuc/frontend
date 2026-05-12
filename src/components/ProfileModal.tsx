@@ -112,7 +112,7 @@ export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.15 }}
             onClick={onClose}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           />
@@ -120,7 +120,7 @@ export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalPr
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300, duration: 0.2 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 400 }}
             className="relative bg-white w-full rounded-t-3xl overflow-hidden shadow-2xl flex flex-col md:h-auto md:max-h-[85vh] md:w-[450px] md:rounded-3xl md:mx-auto md:mb-auto md:mt-auto"
             style={{ height: '85vh' }}
           >
