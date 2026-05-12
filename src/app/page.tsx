@@ -73,13 +73,23 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const TABS = ['dashboard', 'accounts', 'chat', 'reports', 'more'];
+  const userRole = session?.user?.role || 'STAFF';
+  const TABS = userRole === 'ADMIN' 
+    ? ['dashboard', 'accounts', 'chat', 'reports', 'more']
+    : ['dashboard', 'chat', 'more'];
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [touchY, setTouchY] = useState(0);
   const activeIndex = TABS.indexOf(activeTab);
+
+  // Guard: reset tab nếu tab hiện tại không có trong danh sách tab cho role này
+  useEffect(() => {
+    if (!TABS.includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, TABS]);
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -256,19 +266,23 @@ export default function Home() {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <TabPanel active={activeTab === 'dashboard'} index={0} activeIndex={activeIndex}>
+        <TabPanel active={activeTab === 'dashboard'} index={TABS.indexOf('dashboard')} activeIndex={activeIndex}>
           <DashboardView />
         </TabPanel>
-        <TabPanel active={activeTab === 'accounts'} index={1} activeIndex={activeIndex}>
-          <AccountsView />
-        </TabPanel>
-        <TabPanel active={activeTab === 'chat'} index={2} activeIndex={activeIndex}>
+        {userRole === 'ADMIN' && (
+          <TabPanel active={activeTab === 'accounts'} index={TABS.indexOf('accounts')} activeIndex={activeIndex}>
+            <AccountsView />
+          </TabPanel>
+        )}
+        <TabPanel active={activeTab === 'chat'} index={TABS.indexOf('chat')} activeIndex={activeIndex}>
           <ChatView />
         </TabPanel>
-        <TabPanel active={activeTab === 'reports'} index={3} activeIndex={activeIndex}>
-          <PlaceholderView icon={BarChart3} title="Báo Cáo" />
-        </TabPanel>
-        <TabPanel active={activeTab === 'more'} index={4} activeIndex={activeIndex}>
+        {userRole === 'ADMIN' && (
+          <TabPanel active={activeTab === 'reports'} index={TABS.indexOf('reports')} activeIndex={activeIndex}>
+            <PlaceholderView icon={BarChart3} title="Báo Cáo" />
+          </TabPanel>
+        )}
+        <TabPanel active={activeTab === 'more'} index={TABS.indexOf('more')} activeIndex={activeIndex}>
           <SettingsView />
         </TabPanel>
       </main>

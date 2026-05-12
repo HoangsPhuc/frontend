@@ -10,6 +10,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Staff không cần xem số dư tài khoản - chỉ trả về thông tin cơ bản
+    if (session.user.role !== 'ADMIN') {
+      const accounts = await prisma.bankAccount.findMany({
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, name: true, icon: true, color: true }
+      });
+      return NextResponse.json(accounts.map(acc => ({
+        ...acc,
+        bankName: null,
+        accountNumber: null,
+        accountOwner: null,
+        initBalance: 0,
+        balance: 0,
+      })));
+    }
+
     const accounts = await prisma.bankAccount.findMany({
       orderBy: { createdAt: 'asc' },
       include: {
