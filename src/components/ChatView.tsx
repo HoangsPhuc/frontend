@@ -143,7 +143,40 @@ export default function ChatView() {
     } catch { } finally { setLoading(false); }
   }, []);
 
+  const fetchMessagesFor = useCallback(async (friendId: string) => {
+    try {
+      const res = await fetch(`/api/messages?friendId=${friendId}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => {
+          const tempMsgs = prev.filter(m => m.id.startsWith('temp-'));
+          const realMsgs = data.messages || [];
+          return [...realMsgs, ...tempMsgs];
+        });
+        if (data.friend) setChatFriend(prev => prev ? { ...prev, lastSeen: data.friend.lastSeen } : prev);
+        setIsTyping(data.friendTyping || false);
+      }
+    } catch { }
+  }, []);
+
   useEffect(() => { fetchFriends(); }, [fetchFriends]);
+
+  // Lắng nghe Push Notification từ Service Worker để cập nhật tin nhắn ngay lập tức
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'PUSH_RECEIVED') {
+        fetchFriends(); // Cập nhật lại số lượng tin nhắn chưa đọc bên ngoài
+        if (chatFriend) {
+          fetchMessagesFor(chatFriend.id); // Tải lại tin nhắn ngay lập tức nếu đang mở chat
+        }
+      }
+    };
+    
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, [chatFriend, fetchFriends, fetchMessagesFor]);
 
   // Poll friends list every 5s to update unread counts
   useEffect(() => {
@@ -184,24 +217,9 @@ export default function ChatView() {
         msgEndRef.current?.scrollIntoView({ behavior: 'instant' });
       }, 50);
     }
-    // Start polling
+    // Start polling with faster interval
     if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/messages?friendId=${friend.id}`, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          // Lọc bỏ tin nhắn tạm thời (id bắt đầu bằng 'temp-') khi nhận dữ liệu thật từ server
-          setMessages(prev => {
-            const tempMsgs = prev.filter(m => m.id.startsWith('temp-'));
-            const realMsgs = data.messages || [];
-            return [...realMsgs, ...tempMsgs];
-          });
-          if (data.friend) setChatFriend(prev => prev ? { ...prev, lastSeen: data.friend.lastSeen } : prev);
-          setIsTyping(data.friendTyping || false);
-        }
-      } catch { }
-    }, 3000);
+    pollRef.current = setInterval(() => fetchMessagesFor(friend.id), 2000);
   };
 
   const closeChat = () => {

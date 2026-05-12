@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Lấy tin nhắn
-    const messages = await prisma.message.findMany({
+    let messages = await prisma.message.findMany({
       where: {
         OR: [
           { senderId: userId, receiverId: friendId },
@@ -38,9 +38,11 @@ export async function GET(request: NextRequest) {
           select: { id: true, type: true, category: true, amount: true, status: true, transferContent: true, date: true, accountInfo: true, bankName: true, accountNumber: true, accountOwner: true, qrCodeUrl: true, note: true }
         }
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 100,
     });
+    
+    messages = messages.reverse();
 
     // Lấy thông tin bạn bè
     const friend = await prisma.user.findUnique({
