@@ -417,8 +417,6 @@ export default function ChatView() {
     }
   };
 
-  const userRole = session?.user?.role;
-
   const sendFriendRequest = async (userId: string) => {
     try {
       await fetch('/api/friends', {
