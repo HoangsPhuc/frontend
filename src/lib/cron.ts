@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import webpush from 'web-push';
+import { sendPushToAdmins } from './pushHelper';
 
 export function initCron() {
   // Đảm bảo cron chỉ được khởi chạy 1 lần duy nhất (ngay cả trong môi trường dev)
@@ -11,15 +11,9 @@ export function initCron() {
     return;
   }
 
-  webpush.setVapidDetails(
-    'mailto:admin@dualuoitinhbien.com',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+  console.log('✅ Cron job started: Sẽ kiểm tra giao dịch PENDING mỗi 15 phút');
 
-  console.log('✅ Cron job started: Sẽ kiểm tra giao dịch PENDING mỗi 1 phút');
-
-  // Chạy lặp lại mỗi 1 phút (60,000 milliseconds)
+  // Chạy lặp lại mỗi 15 phút (thay vì 1 phút để tránh bị browser throttle push)
   setInterval(async () => {
     try {
       // Tìm xem có bao nhiêu đơn đang PENDING
@@ -29,13 +23,7 @@ export function initCron() {
 
       // Nếu có đơn chưa duyệt, gửi thông báo nhắc nhở
       if (pendingCount > 0) {
-        const adminSubscriptions = await prisma.pushSubscription.findMany({
-          where: { user: { role: 'ADMIN' } }
-        });
-
-        if (adminSubscriptions.length === 0) return;
-
-        const payload = JSON.stringify({
+        const result = await sendPushToAdmins({
           title: '⏰ Nhắc nhở duyệt chi',
           options: {
             body: `Bạn vẫn còn ${pendingCount} đơn chưa duyệt! Vui lòng vào ứng dụng để kiểm tra.`,
@@ -52,30 +40,12 @@ export function initCron() {
           }
         });
 
-        const results = await Promise.allSettled(
-          adminSubscriptions.map(sub =>
-            webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth }
-            }, payload)
-          )
-        );
-
-        for (let idx = 0; idx < results.length; idx++) {
-          const res = results[idx];
-          if (res.status === 'rejected') {
-            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
-              try {
-                await prisma.pushSubscription.deleteMany({
-                  where: { endpoint: adminSubscriptions[idx].endpoint }
-                });
-              } catch (delErr) {}
-            }
-          }
+        if (result.sent > 0) {
+          console.log(`[Cron] Reminder sent: ${result.sent} ok, ${result.failed} fail, ${result.cleaned} cleaned`);
         }
       }
     } catch (err) {
       console.error('Cron job error:', err);
     }
-  }, 60 * 1000);
+  }, 15 * 60 * 1000); // 15 phút
 }

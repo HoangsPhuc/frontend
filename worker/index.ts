@@ -30,19 +30,31 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   );
 });
 
-// Khi nhận được push từ server (app đang đóng/chạy nền)
+// Khi nhận được push từ server (app đang đóng/chạy nền hoặc foreground)
 self.addEventListener('push', (event: PushEvent) => {
-  if (event.data) {
-    const data = event.data.json();
-    const title = data.title || 'Thông báo mới';
-    const options = data.options || {
-      body: 'Bạn có yêu cầu mới',
-      icon: '/logo.jpg',
-      badge: '/logo.jpg',
-    };
+  if (!event.data) return;
 
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-    );
-  }
+  const data = event.data.json();
+  const title = data.title || 'Thông báo mới';
+  const options = data.options || {
+    body: 'Bạn có yêu cầu mới',
+    icon: '/logo.jpg',
+    badge: '/logo.jpg',
+  };
+
+  event.waitUntil(
+    (async () => {
+      // Luôn hiện notification hệ thống (cả khi app đang mở)
+      await self.registration.showNotification(title, options);
+
+      // Gửi message vào tất cả tab đang mở để trigger in-app refresh
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clients) {
+        client.postMessage({
+          type: 'PUSH_RECEIVED',
+          payload: { title, ...options },
+        });
+      }
+    })()
+  );
 });

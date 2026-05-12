@@ -124,29 +124,20 @@ export async function POST(request: NextRequest) {
       });
 
       try {
-        const webpush = require('web-push');
-        webpush.setVapidDetails(
-          'mailto:admin@dualuoitinhbien.com',
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-          process.env.VAPID_PRIVATE_KEY || ''
-        );
-
-        // Lấy tất cả Push Subscription của các Admin
-        const adminSubscriptions = await prisma.pushSubscription.findMany({
-          where: { user: { role: 'ADMIN' } }
-        });
+        const { sendPushToAdmins } = await import('@/lib/pushHelper');
 
         const pendingCount = await prisma.transaction.count({
           where: { status: 'PENDING' }
         });
 
-        const payload = JSON.stringify({
+        const result = await sendPushToAdmins({
           title: `🔔 Yêu cầu từ ${session.user.name}`,
           options: {
             body: `Có ${pendingCount} đơn mới đang chờ duyệt!\nNội dung: ${isEditRequest ? '[YÊU CẦU SỬA] ' : ''}${transferContent || category}`,
             icon: session.user.avatarUrl || '/logo.jpg',
             badge: '/logo.jpg',
             vibrate: [600, 200, 600, 200, 800],
+            tag: 'new-transaction', // Gom notification cùng loại
             data: { url: '/' },
             actions: [
               { action: 'open', title: '📋 Mở duyệt ngay' },
@@ -154,32 +145,9 @@ export async function POST(request: NextRequest) {
             ]
           }
         });
-
-        // Gửi push song song
-        const results = await Promise.allSettled(
-          adminSubscriptions.map(sub =>
-            webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth }
-            }, payload)
-          )
-        );
-
-        for (let idx = 0; idx < results.length; idx++) {
-          const res = results[idx];
-          if (res.status === 'rejected') {
-            console.error(`Push failed for admin sub ${idx}:`, res.reason);
-            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
-              try {
-                await prisma.pushSubscription.deleteMany({
-                  where: { endpoint: adminSubscriptions[idx].endpoint }
-                });
-              } catch (delErr) {}
-            }
-          }
-        }
+        console.log(`[Push] Transaction notification: ${result.sent} sent, ${result.failed} failed, ${result.cleaned} cleaned`);
       } catch (err) {
-        console.error('Lỗi khi gửi push notification:', err);
+        console.error('[Push] Transaction notification error:', err);
       }
     }
 

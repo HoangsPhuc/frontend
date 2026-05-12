@@ -118,9 +118,20 @@ export default function Home() {
     const handleRefresh = () => fetchUnread();
     window.addEventListener('refreshNotifications', handleRefresh);
 
+    // Listen for push messages from Service Worker (real-time in-app refresh)
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_RECEIVED') {
+        // Ngay lập tức refresh notification count + message badge
+        fetchUnread();
+        window.dispatchEvent(new Event('refreshMessageBadge'));
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('refreshNotifications', handleRefresh);
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     };
   }, [status]);
 

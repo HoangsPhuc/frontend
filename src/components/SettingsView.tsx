@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
   BellOff,
@@ -11,6 +11,10 @@ import {
   ChevronRight,
   Volume2,
   VolumeX,
+  Zap,
+  CheckCircle,
+  XCircle,
+  Loader2,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -29,6 +33,8 @@ export default function SettingsView() {
 
   const [notifPermission, setNotifPermission] = useState<string>('default');
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [pushTestStatus, setPushTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [pushTestMessage, setPushTestMessage] = useState('');
 
   // Đọc trạng thái hiện tại
   useEffect(() => {
@@ -66,15 +72,19 @@ export default function SettingsView() {
       }
       
       if (subscription) {
-        await fetch('/api/push', {
+        // Luôn gửi lên server để đảm bảo DB có subscription mới nhất
+        const res = await fetch('/api/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(subscription),
         });
+        if (!res.ok) {
+          console.error('[Push] Failed to save subscription:', await res.text());
+        }
       }
     } catch (e: any) {
-      console.error('Failed to subscribe:', e);
-      alert('Lỗi đăng ký thông báo ngầm: ' + (e.message || e));
+      console.error('[Push] Failed to subscribe:', e);
+      alert('Lỗi đăng ký thông báo: ' + (e.message || e));
     }
   };
 
@@ -113,6 +123,81 @@ export default function SettingsView() {
     localStorage.setItem('notification_sound', String(newVal));
     // Dispatch event để DashboardView lắng nghe
     window.dispatchEvent(new CustomEvent('sound_setting_changed', { detail: newVal }));
+  };
+
+  const handleTestPush = async () => {
+    setPushTestStatus('testing');
+    setPushTestMessage('Đang kiểm tra...');
+
+    try {
+      // Bước 1: Kiểm tra Service Worker
+      if (!('serviceWorker' in navigator)) {
+        setPushTestStatus('error');
+        setPushTestMessage('❌ Trình duyệt không hỗ trợ Service Worker');
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration) {
+        setPushTestStatus('error');
+        setPushTestMessage('❌ Service Worker chưa sẵn sàng');
+        return;
+      }
+
+      // Bước 2: Kiểm tra permission
+      if (Notification.permission !== 'granted') {
+        setPushTestStatus('error');
+        setPushTestMessage('❌ Chưa cấp quyền thông báo. Bấm nút bật ở trên.');
+        return;
+      }
+
+      // Bước 3: Kiểm tra subscription
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        setPushTestMessage('⏳ Đang tạo subscription mới...');
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '')
+        });
+      }
+
+      if (!subscription) {
+        setPushTestStatus('error');
+        setPushTestMessage('❌ Không thể tạo push subscription');
+        return;
+      }
+
+      // Bước 4: Lưu subscription lên server
+      setPushTestMessage('⏳ Đang lưu subscription...');
+      const saveRes = await fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription),
+      });
+
+      if (!saveRes.ok) {
+        const err = await saveRes.text();
+        setPushTestStatus('error');
+        setPushTestMessage(`❌ Lỗi lưu subscription: ${err}`);
+        return;
+      }
+
+      // Bước 5: Gửi test push từ server
+      setPushTestMessage('⏳ Đang gửi push từ server...');
+      const testRes = await fetch('/api/push/test', { method: 'POST' });
+      const testData = await testRes.json();
+
+      if (testData.success) {
+        setPushTestStatus('success');
+        setPushTestMessage(`✅ Gửi thành công! (${testData.result.sent} sent, ${testData.result.failed} fail)\nBạn sẽ thấy thông báo xuất hiện.`);
+      } else {
+        setPushTestStatus('error');
+        setPushTestMessage(`❌ ${testData.diagnosis || testData.error || 'Push thất bại'}`);
+      }
+    } catch (err: any) {
+      setPushTestStatus('error');
+      setPushTestMessage(`❌ Lỗi: ${err.message || err}`);
+    }
   };
 
   return (
@@ -182,6 +267,46 @@ export default function SettingsView() {
               />
             </motion.button>
           </div>
+
+          {/* Test Push Button */}
+          {notifPermission === 'granted' && (
+            <div className="px-4 py-3.5 border-b border-gray-50">
+              <button
+                onClick={handleTestPush}
+                disabled={pushTestStatus === 'testing'}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-medium shadow-md shadow-blue-200 active:scale-95 transition-transform disabled:opacity-60"
+              >
+                {pushTestStatus === 'testing' ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Zap size={16} />
+                )}
+                Kiểm tra thông báo đẩy
+              </button>
+              <AnimatePresence>
+                {pushTestStatus !== 'idle' && pushTestStatus !== 'testing' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2"
+                  >
+                    <div className={`flex items-start gap-2 p-3 rounded-xl text-xs ${
+                      pushTestStatus === 'success' 
+                        ? 'bg-emerald-50 text-emerald-700' 
+                        : 'bg-red-50 text-red-700'
+                    }`}>
+                      {pushTestStatus === 'success' 
+                        ? <CheckCircle size={14} className="mt-0.5 shrink-0" />
+                        : <XCircle size={14} className="mt-0.5 shrink-0" />
+                      }
+                      <span className="whitespace-pre-wrap">{pushTestMessage}</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Sound toggle */}
           <div className="px-4 py-3.5 flex items-center justify-between">

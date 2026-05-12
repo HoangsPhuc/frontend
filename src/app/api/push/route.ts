@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import webpush from 'web-push';
-
-webpush.setVapidDetails(
-  'mailto:admin@dualuoitinhbien.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-);
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +11,11 @@ export async function POST(req: NextRequest) {
     }
 
     const subscription = await req.json();
+
+    // Validate subscription data
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      return NextResponse.json({ error: 'Invalid subscription data' }, { status: 400 });
+    }
 
     // Lưu subscription vào DB
     await prisma.pushSubscription.upsert({
@@ -35,9 +33,37 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log(`[Push] Subscription saved for user ${session.user.id} (${session.user.name})`);
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error saving subscription:', error);
+    console.error('[Push] Error saving subscription:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// DELETE: Cho phép client xóa subscription khi unsubscribe
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { endpoint } = await req.json();
+    if (!endpoint) {
+      return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 });
+    }
+
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint, userId: session.user.id },
+    });
+
+    console.log(`[Push] Subscription removed for user ${session.user.id}`);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[Push] Error deleting subscription:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

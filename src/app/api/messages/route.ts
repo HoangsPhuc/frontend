@@ -114,58 +114,23 @@ export async function POST(request: NextRequest) {
     } catch {}
 
     try {
-      const webpush = require('web-push');
-      webpush.setVapidDetails(
-        'mailto:admin@dualuoitinhbien.com',
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-        process.env.VAPID_PRIVATE_KEY || ''
-      );
-
-      const receiverSubs = await prisma.pushSubscription.findMany({
-        where: { userId: receiverId },
+      const { sendPushToUser } = await import('@/lib/pushHelper');
+      const result = await sendPushToUser(receiverId, {
+        title: `💬 ${senderName}`,
+        options: {
+          body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
+          icon: session.user.avatarUrl || '/logo.jpg',
+          badge: '/logo.jpg',
+          vibrate: [200, 100, 200],
+          tag: `msg-${senderId}`, // Gom notification cùng sender, tránh spam
+          data: { url: '/' },
+        },
       });
-
-      if (receiverSubs.length > 0) {
-        const payload = JSON.stringify({
-          title: `💬 ${senderName}`,
-          options: {
-            body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
-            icon: session.user.avatarUrl || '/logo.jpg',
-            badge: '/logo.jpg',
-            vibrate: [200, 100, 200],
-            data: { url: '/' },
-          },
-        });
-
-        const results = await Promise.allSettled(
-          receiverSubs.map(sub =>
-            webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            }, payload)
-          )
-        );
-
-        for (let idx = 0; idx < results.length; idx++) {
-          const res = results[idx];
-          if (res.status === 'rejected') {
-            console.error(`Push failed for sub ${idx}:`, res.reason);
-            // Xóa subscription nếu token đã hết hạn hoặc bị người dùng hủy
-            if (res.reason.statusCode === 410 || res.reason.statusCode === 404) {
-              try {
-                await prisma.pushSubscription.deleteMany({
-                  where: { endpoint: receiverSubs[idx].endpoint }
-                });
-                console.log(`Đã xóa subscription hết hạn của user ${receiverId}`);
-              } catch (delErr) {
-                console.error('Lỗi khi xóa subscription:', delErr);
-              }
-            }
-          }
-        }
+      if (result.sent > 0) {
+        console.log(`[Push] Message notification sent to ${receiverId}: ${result.sent} ok, ${result.failed} fail`);
       }
     } catch (err) {
-      console.error('Push notification error:', err);
+      console.error('[Push] Message notification error:', err);
     }
 
     return NextResponse.json(message, { status: 201 });

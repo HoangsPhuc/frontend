@@ -55,17 +55,18 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     };
   }, [status]);
 
-  // Tự động cấu hình lại thông báo khi đổi tài khoản (nếu máy đã cho phép trước đó)
+  // Tự động cấu hình lại thông báo khi đổi tài khoản, SW cập nhật, hoặc app focus lại
   useEffect(() => {
     if (status !== 'authenticated') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    const autoSubscribe = async () => {
+    const doSubscribe = async () => {
       try {
         const registration = await navigator.serviceWorker.ready;
         let subscription = await registration.pushManager.getSubscription();
 
+        // Nếu chưa có subscription hoặc subscription cũ → tạo mới
         if (!subscription) {
           const base64String = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
           if (!base64String) return;
@@ -85,6 +86,7 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         }
         
         if (subscription) {
+          // Luôn gửi lên server để đảm bảo DB có subscription mới nhất
           await fetch('/api/push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -92,10 +94,32 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           });
         }
       } catch (err) {
-        console.error('Auto-subscribe error:', err);
+        console.error('[Push] Auto-subscribe error:', err);
       }
     };
-    autoSubscribe();
+
+    // Subscribe ngay khi component mount
+    doSubscribe();
+
+    // Re-subscribe khi Service Worker cập nhật (subscription cũ có thể bị invalid)
+    const handleControllerChange = () => {
+      console.log('[Push] SW controller changed, re-subscribing...');
+      doSubscribe();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+    // Re-subscribe khi app quay lại foreground (subscription có thể đã hết hạn)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        doSubscribe();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [status]);
 
   const visibleTabs = allTabs.filter(tab => tab.roles.includes(userRole));
