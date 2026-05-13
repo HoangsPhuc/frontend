@@ -10,7 +10,7 @@ import {
   MessageCircle, Users, UserPlus, Search, Send, ArrowLeft, Check, X,
   Clock, CheckCheck, Circle, Shield, ChevronRight, UserCheck, Loader2,
   Paperclip, Image as ImageIcon, FileText, ArrowUpCircle, ArrowDownCircle,
-  Eye, Smile, UserMinus, ArrowDown
+  Eye, Smile, UserMinus, ArrowDown, Settings, Plus
 } from 'lucide-react';
 
 interface UserItem {
@@ -41,29 +41,41 @@ function isOnline(dateStr: string) { return Date.now() - new Date(dateStr).getTi
 
 const STICKER_CATEGORIES = [
   {
-    id: 'smilies',
-    name: 'Cảm xúc',
-    icon: '😄',
+    id: 'cute',
+    name: 'Dễ thương',
+    icon: '🥰',
     stickers: [
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Grinning%20Face%20with%20Big%20Eyes.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Heart-Eyes.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20with%20Tears%20of%20Joy.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Loudly%20Crying%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pleading%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Hearts.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20Holding%20Back%20Tears.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Thinking%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Sleeping%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20with%20Rolling%20Eyes.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20Exhaling.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Sunglasses.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pleading%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20Blowing%20a%20Kiss.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Star-Struck.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smirking%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Yawning%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Zany%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Partying%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Shushing%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Zipper-Mouth%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Nerd%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20with%20Peeking%20Eye.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Melting%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Saluting%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Red%20Heart.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Broken%20Heart.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Sparkling%20Heart.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Heart%20on%20Fire.png',
+    ]
+  },
+  {
+    id: 'chibi_cats',
+    name: 'Mèo Chibi',
+    icon: '😺',
+    stickers: [
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Cat%20with%20Heart-Eyes.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Cat%20with%20Tears%20of%20Joy.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Kissing%20Cat.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Grinning%20Cat%20with%20Smiling%20Eyes.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Crying%20Cat.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pouting%20Cat.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Black%20Cat.png',
     ]
   },
   {
@@ -74,23 +86,34 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Melon.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Watermelon.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Strawberry.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cherry%20Blossom.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Grapes.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Banana.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Hamburger.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Pizza.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/French%20Fries.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Hot%20Dog.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Beer%20Mug.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Clinking%20Beer%20Mugs.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Bubble%20Tea.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Cupcake.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Shortcake.png',
     ]
   },
   {
     id: 'animals',
     name: 'Động vật',
-    icon: '🐱',
+    icon: '🐶',
     stickers: [
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Dog%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Monkey%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/See-No-Evil%20Monkey.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hear-No-Evil%20Monkey.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Speak-No-Evil%20Monkey.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Pig%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hatching%20Chick.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Penguin.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Frog.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Turtle.png',
     ]
@@ -107,6 +130,9 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Folded%20Hands.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Waving%20Hand.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/OK%20Hand.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Call%20Me%20Hand.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Sign%20of%20the%20Horns.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Index%20Pointing%20Up.png',
     ]
   },
   {
@@ -116,11 +142,18 @@ const STICKER_CATEGORIES = [
     stickers: [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Firecracker.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Party%20Popper.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Balloon.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Rocket.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Helicopter.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Money%20Bag.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Money%20with%20Wings.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Gem%20Stone.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Activities/Trophy.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Check%20Mark%20Button.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Cross%20Mark%20Button.png'
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Cross%20Mark%20Button.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Warning.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Hundred%20Points.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Anger%20Symbol.png',
     ]
   }
 ];
@@ -868,8 +901,8 @@ export default function ChatView() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 350, mass: 0.8 }}
-                className="absolute bottom-full left-4 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-20"
-                style={{ transformOrigin: 'bottom left' }}
+                className="absolute bottom-full left-0 right-0 md:left-4 md:right-auto md:w-[320px] md:mb-2 bg-white md:rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.08)] md:shadow-xl border-t md:border border-gray-100 overflow-hidden z-20 rounded-t-2xl md:rounded-b-2xl"
+                style={{ transformOrigin: 'bottom center' }}
               >
                 <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 w-full text-left transition-colors relative z-30">
                   <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600"><ImageIcon size={16} /></div>
@@ -891,30 +924,36 @@ export default function ChatView() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 350, mass: 0.8 }}
-                className="absolute bottom-full left-4 right-4 mb-2 bg-white rounded-3xl shadow-xl border border-gray-100 z-20 flex flex-col overflow-hidden"
-                style={{ transformOrigin: 'bottom left' }}
+                className="absolute bottom-full left-0 right-0 md:left-4 md:right-4 md:mb-2 bg-white md:rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.08)] md:shadow-xl border-t md:border border-gray-100 z-20 flex flex-col overflow-hidden rounded-t-3xl md:rounded-b-3xl"
+                style={{ transformOrigin: 'bottom center' }}
               >
-                {/* Tabs */}
-                <div className="flex overflow-x-auto no-scrollbar border-b border-gray-50 px-2 py-2 gap-1">
-                  {STICKER_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveStickerTab(cat.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${
-                        activeStickerTab === cat.id 
-                          ? 'bg-amber-100 text-amber-700' 
-                          : 'bg-transparent text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="text-base">{cat.icon}</span>
-                      {cat.name}
-                    </button>
-                  ))}
+                {/* Header Zalo style */}
+                <div className="flex bg-white px-2 mt-1">
+                  <button className="flex-1 py-2.5 text-[13px] font-bold text-blue-600 border-b-[3px] border-blue-600 text-center uppercase tracking-wide">
+                    Sticker
+                  </button>
+                  <button className="flex-1 py-2.5 text-[13px] font-bold text-gray-400 text-center uppercase tracking-wide hover:text-gray-600 transition-colors">
+                    Emoji
+                  </button>
+                  <button className="flex-1 py-2.5 text-[13px] font-bold text-gray-400 text-center uppercase tracking-wide hover:text-gray-600 transition-colors">
+                    GIF
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="px-3 py-2 bg-white">
+                  <div className="bg-gray-100/80 rounded-full flex items-center px-3 py-2 gap-2 border border-gray-200/60 focus-within:border-blue-300 focus-within:bg-white transition-all">
+                    <Search size={16} className="text-gray-400" />
+                    <input type="text" placeholder="Tìm kiếm sticker" className="bg-transparent text-[13px] w-full outline-none text-gray-700 placeholder:text-gray-400" />
+                  </div>
                 </div>
 
                 {/* Stickers Grid */}
-                <div className="p-2.5">
-                  <div className="grid grid-cols-6 gap-1 overflow-y-auto max-h-[180px] overscroll-contain">
+                <div className="p-3 bg-white flex-1 overflow-y-auto max-h-[200px] overscroll-contain">
+                  <h4 className="text-sm font-bold text-gray-800 mb-3 px-1">
+                    {STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.name || 'Gần đây'}
+                  </h4>
+                  <div className="grid grid-cols-4 gap-2">
                     {STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.stickers.map((stickerUrl, idx) => (
                       <button
                         key={idx}
@@ -925,7 +964,7 @@ export default function ChatView() {
                           setShowStickers(false);
                           sendMessage({ imageUrl: stickerUrl });
                         }}
-                        className="w-full aspect-square p-1.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-colors"
+                        className="w-full aspect-square p-2 rounded-2xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-colors"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -933,11 +972,33 @@ export default function ChatView() {
                           alt="sticker"
                           loading="lazy"
                           decoding="async"
-                          className="w-10 h-10 object-contain pointer-events-none"
+                          className="w-full h-full object-contain pointer-events-none drop-shadow-sm hover:scale-110 transition-transform"
                         />
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Bottom Icon Tabs */}
+                <div className="flex items-center overflow-x-auto no-scrollbar border-t border-gray-100 bg-gray-50/80 px-2 py-1.5 gap-1 shrink-0">
+                  <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors shrink-0"><Clock size={18} strokeWidth={2.5} /></button>
+                  <div className="w-[1px] h-5 bg-gray-300 mx-1 shrink-0" />
+                  {STICKER_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveStickerTab(cat.id)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                        activeStickerTab === cat.id 
+                          ? 'bg-white shadow-sm border border-gray-200 scale-105 opacity-100' 
+                          : 'bg-transparent grayscale opacity-50 hover:opacity-100'
+                      }`}
+                    >
+                      <span className="text-[22px] leading-none">{cat.icon}</span>
+                    </button>
+                  ))}
+                  <div className="w-[1px] h-5 bg-gray-300 mx-1 shrink-0" />
+                  <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0"><Settings size={18} strokeWidth={2.5} /></button>
+                  <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0"><Plus size={20} strokeWidth={2.5} /></button>
                 </div>
               </motion.div>
             )}
@@ -952,14 +1013,22 @@ export default function ChatView() {
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => { setShowAttach(!showAttach); setShowStickers(false); }}
+              onClick={() => { 
+                setShowAttach(!showAttach); 
+                setShowStickers(false); 
+                if (!showAttach) inputRef.current?.blur();
+              }}
               className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${showAttach ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
             >
               <Paperclip size={18} />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => { setShowStickers(!showStickers); setShowAttach(false); }}
+              onClick={() => { 
+                setShowStickers(!showStickers); 
+                setShowAttach(false); 
+                if (!showStickers) inputRef.current?.blur();
+              }}
               className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${showStickers ? 'bg-amber-100 text-amber-500' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
             >
               <Smile size={18} />

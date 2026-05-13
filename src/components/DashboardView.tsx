@@ -160,8 +160,14 @@ export default function DashboardView() {
   const [pendingSync, setPendingSync] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
-  const [historyFilterStartDate, setHistoryFilterStartDate] = useState<string>('');
-  const [historyFilterEndDate, setHistoryFilterEndDate] = useState<string>('');
+  const [historyFilterStartDate, setHistoryFilterStartDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const [historyFilterEndDate, setHistoryFilterEndDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [historyFilterUser, setHistoryFilterUser] = useState<string>('all');
   const prevPendingCountRef = useRef(0);
   const isFirstLoadRef = useRef(true);
