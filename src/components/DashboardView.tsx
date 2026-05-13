@@ -534,9 +534,22 @@ export default function DashboardView() {
 
   const handleApprove = async (id: string, e: React.MouseEvent, bankAccountId?: string) => {
     e.stopPropagation();
+    
+    let finalBankAccountId = bankAccountId;
+    if (!finalBankAccountId && bankAccounts.length > 0) {
+      if (bankAccounts.length === 1) {
+        finalBankAccountId = bankAccounts[0].id;
+      } else {
+        alert('Có nhiều tài khoản. Vui lòng Bấm vào giao dịch để chọn tài khoản trừ tiền!');
+        const tx = transactions.find(t => t.id === id);
+        if (tx) setDetailTx(tx);
+        return false;
+      }
+    }
+
     try {
       const payload: any = { status: 'APPROVED' };
-      if (bankAccountId) payload.bankAccountId = bankAccountId;
+      if (finalBankAccountId) payload.bankAccountId = finalBankAccountId;
 
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PUT',
@@ -1222,7 +1235,7 @@ export default function DashboardView() {
       {/* ═══ REJECT REASON MODAL ═══ */}
       <AnimatePresence>
         {rejectPromptId && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[110] flex items-start justify-center p-4 pt-[15vh] sm:items-center sm:pt-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1248,6 +1261,11 @@ export default function DashboardView() {
                   placeholder="Nhập vào lí do từ chối..."
                   value={rejectReason}
                   onChange={e => setRejectReason(e.target.value)}
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                  }}
                 />
               </div>
               <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">

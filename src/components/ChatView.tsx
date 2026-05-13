@@ -157,6 +157,8 @@ export default function ChatView() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const [detailTx, setDetailTx] = useState<Msg['transaction'] | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
   const msgEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -205,6 +207,16 @@ export default function ChatView() {
       }
     } catch { }
   }, []);
+
+  useEffect(() => {
+    if (userRole === 'ADMIN') {
+      fetch('/api/bank-accounts')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setBankAccounts(data);
+        }).catch(() => {});
+    }
+  }, [userRole]);
 
   useEffect(() => { fetchFriends(); }, [fetchFriends]);
 
@@ -460,14 +472,31 @@ export default function ChatView() {
   const [rejectingTxId, setRejectingTxId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const handleTxAction = async (txId: string, action: 'APPROVED' | 'REJECTED') => {
+  const handleTxAction = async (txId: string, action: 'APPROVED' | 'REJECTED', bankAccountId?: string) => {
     if (action === 'REJECTED' && !rejectReason.trim()) return;
+    
+    let finalBankAccountId = bankAccountId;
+    if (action === 'APPROVED' && !finalBankAccountId && bankAccounts.length > 0) {
+      if (bankAccounts.length === 1) {
+        finalBankAccountId = bankAccounts[0].id;
+      } else {
+        alert('Có nhiều tài khoản. Vui lòng Mở Chi tiết giao dịch để chọn Tài khoản thanh toán!');
+        const m = messages.find(msg => msg.transaction?.id === txId);
+        if (m && m.transaction) setDetailTx(m.transaction);
+        return;
+      }
+    }
+
     setProcessingTx(txId);
     try {
+      const payload: any = { status: action };
+      if (action === 'REJECTED') payload.rejectReason = rejectReason.trim();
+      if (finalBankAccountId) payload.bankAccountId = finalBankAccountId;
+
       const res = await fetch(`/api/transactions/${txId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action, rejectReason: action === 'REJECTED' ? rejectReason.trim() : undefined }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         // Update transaction status in messages locally
@@ -623,6 +652,11 @@ export default function ChatView() {
                               autoFocus
                               value={rejectReason}
                               onChange={e => setRejectReason(e.target.value)}
+                              onFocus={(e) => {
+                                setTimeout(() => {
+                                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 300);
+                              }}
                               placeholder="Nhập lý do từ chối..."
                               className="w-full text-xs px-2 py-1.5 rounded bg-white border border-red-200 text-gray-900 focus:outline-none focus:border-red-400"
                             />
@@ -1007,7 +1041,7 @@ export default function ChatView() {
               {detailTx && (
                 <motion.div
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4"
+                  className="fixed inset-0 bg-black/50 z-[300] flex items-start justify-center p-4 pt-[10vh] sm:items-center sm:pt-4"
                   onClick={() => setDetailTx(null)}
                 >
                   <motion.div
@@ -1083,6 +1117,11 @@ export default function ChatView() {
                               autoFocus
                               value={rejectReason}
                               onChange={e => setRejectReason(e.target.value)}
+                              onFocus={(e) => {
+                                setTimeout(() => {
+                                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 300);
+                              }}
                               placeholder="Nhập lý do từ chối..."
                               className="w-full text-sm px-3 py-2 rounded-xl bg-white border border-red-200 text-gray-900 focus:outline-none focus:border-red-400"
                             />
@@ -1103,19 +1142,43 @@ export default function ChatView() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => { handleTxAction(detailTx.id, 'APPROVED'); setDetailTx({ ...detailTx, status: 'APPROVED' }); }}
-                              className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-1.5 hover:bg-emerald-600 active:scale-95 transition-all shadow-md shadow-emerald-500/20"
-                            >
-                              <Check size={18} /> Duyệt giao dịch
-                            </button>
-                            <button
-                              onClick={() => { setRejectingTxId(detailTx.id); setRejectReason(''); }}
-                              className="px-4 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold text-sm hover:bg-red-100 hover:text-red-600 active:scale-95 transition-all"
-                            >
-                              Từ chối
-                            </button>
+                          <div className="flex flex-col gap-3">
+                            {bankAccounts.length > 0 && (
+                              <div className="mb-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">Nguồn tiền / Tài khoản:</label>
+                                <select
+                                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 outline-none focus:border-emerald-400"
+                                  value={selectedBankAccountId}
+                                  onChange={(e) => setSelectedBankAccountId(e.target.value)}
+                                >
+                                  <option value="">-- Chọn tài khoản --</option>
+                                  {bankAccounts.map(acc => (
+                                    <option key={acc.id} value={acc.id}>{acc.name} (Dư: {acc.balance?.toLocaleString('vi-VN')}đ)</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                            <div className="flex gap-3">
+                              <button
+                                onClick={async () => {
+                                  if (bankAccounts.length > 0 && !selectedBankAccountId) {
+                                    alert('Vui lòng chọn tài khoản nguồn!');
+                                    return;
+                                  }
+                                  await handleTxAction(detailTx.id, 'APPROVED', selectedBankAccountId);
+                                  setDetailTx({ ...detailTx, status: 'APPROVED' });
+                                }}
+                                className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-1.5 hover:bg-emerald-600 active:scale-95 transition-all shadow-md shadow-emerald-500/20"
+                              >
+                                <Check size={18} /> Duyệt giao dịch
+                              </button>
+                              <button
+                                onClick={() => { setRejectingTxId(detailTx.id); setRejectReason(''); }}
+                                className="px-4 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold text-sm hover:bg-red-100 hover:text-red-600 active:scale-95 transition-all"
+                              >
+                                Từ chối
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

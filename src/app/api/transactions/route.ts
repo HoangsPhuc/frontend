@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // "THU" | "CHI" | null (all)
 
     const where: any = type ? { type } : {};
-    
+
     // NẾU LÀ STAFF -> CHỈ LẤY GIAO DỊCH DO CHÍNH HỌ TẠO
     if (session.user.role === 'STAFF') {
       where.userId = session.user.id;
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         });
 
         const result = await sendPushToAdmins({
-          title: `🔔 Yêu cầu từ ${session.user.name}`,
+          title: `Yêu cầu từ ${session.user.name}`,
           options: {
             body: `Có ${pendingCount} đơn mới đang chờ duyệt!\nNội dung: ${isEditRequest ? '[YÊU CẦU SỬA] ' : ''}${transferContent || categoryLabels[category] || category}`,
             icon: session.user.avatarUrl || '/logo.jpg',
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
             tag: 'new-transaction', // Gom notification cùng loại
             data: { url: '/' },
             actions: [
-              { action: 'open', title: '📋 Mở duyệt ngay' },
+              { action: 'open', title: 'Mở duyệt ngay' },
               { action: 'dismiss', title: 'Bỏ qua' },
             ]
           }
