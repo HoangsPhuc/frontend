@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         const result = await sendPushToAdmins({
           title: `🔔 Yêu cầu từ ${session.user.name}`,
           options: {
-            body: `Có ${pendingCount} đơn mới đang chờ duyệt!\nNội dung: ${isEditRequest ? '[YÊU CẦU SỬA] ' : ''}${transferContent || category}`,
+            body: `Có ${pendingCount} đơn mới đang chờ duyệt!\nNội dung: ${isEditRequest ? '[YÊU CẦU SỬA] ' : ''}${transferContent || categoryLabels[category] || category}`,
             icon: session.user.avatarUrl || '/logo.jpg',
             badge: '/logo.jpg',
             vibrate: [600, 200, 600, 200, 800],
