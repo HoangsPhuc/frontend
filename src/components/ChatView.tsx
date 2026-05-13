@@ -10,7 +10,7 @@ import {
   MessageCircle, Users, UserPlus, Search, Send, ArrowLeft, Check, X,
   Clock, CheckCheck, Circle, Shield, ChevronRight, UserCheck, Loader2,
   Paperclip, Image as ImageIcon, FileText, ArrowUpCircle, ArrowDownCircle,
-  Eye, Smile, UserMinus, ArrowDown, Settings, Plus
+  Eye, Smile, UserMinus, ArrowDown, Settings, Plus, Reply, Copy, Trash2
 } from 'lucide-react';
 
 interface UserItem {
@@ -25,6 +25,7 @@ interface Msg {
     accountInfo?: string | null; bankName?: string | null; accountNumber?: string | null; accountOwner?: string | null; qrCodeUrl?: string | null; note?: string | null;
   } | null;
   isRead: boolean; createdAt: string;
+  reaction?: string | null;
 }
 
 function timeAgo(dateStr: string) {
@@ -210,6 +211,39 @@ export default function ChatView() {
       const next = [url, ...prev.filter(u => u !== url)].slice(0, 16);
       localStorage.setItem('recentStickers', JSON.stringify(next));
       return next;
+    });
+  };
+
+  const [reactionMenuId, setReactionMenuId] = useState<string | null>(null);
+  const [replyMsg, setReplyMsg] = useState<Msg | null>(null);
+  
+  const handleReaction = async (messageId: string, reaction: string) => {
+    setReactionMenuId(null);
+    const prevMessages = [...messages];
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reaction } : m));
+    try {
+      await fetch('/api/messages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, reaction })
+      });
+    } catch {
+      setMessages(prevMessages);
+    }
+  };
+
+  const handleRecallMessage = async (messageId: string) => {
+    setReactionMenuId(null);
+    setConfirmModal({
+      title: 'Thu hồi tin nhắn',
+      message: 'Tin nhắn này sẽ bị xóa với mọi người trong đoạn chat. Bạn có chắc chắn không?',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await fetch(`/api/messages?messageId=${messageId}`, { method: 'DELETE' });
+          setMessages(prev => prev.filter(m => m.id !== messageId));
+        } catch {}
+      }
     });
   };
 
@@ -424,7 +458,13 @@ export default function ChatView() {
   const sendMessage = async (extra?: { imageUrl?: string; transactionId?: string }) => {
     if (!chatFriend || sending || sendingRef.current) return;
     if (!newMsg.trim() && !extra?.imageUrl && !extra?.transactionId) return;
-    const content = newMsg.trim();
+
+    let finalContent = newMsg.trim();
+    if (replyMsg && finalContent) {
+      finalContent = `[Trả lời ${replyMsg.senderId === userId ? 'bạn' : chatFriend.name}: "${replyMsg.content ? (replyMsg.content.length > 20 ? replyMsg.content.substring(0, 20) + '...' : replyMsg.content) : 'Đính kèm'}"]\n\n${finalContent}`;
+      setReplyMsg(null);
+    }
+
     setNewMsg('');
     setSending(true);
     sendingRef.current = true;
@@ -441,7 +481,7 @@ export default function ChatView() {
       id: 'temp-' + Date.now(),
       senderId: session?.user?.id || '',
       receiverId: chatFriend.id,
-      content,
+      content: finalContent,
       imageUrl: extra?.imageUrl || null,
       transactionId: extra?.transactionId || null,
       createdAt: new Date().toISOString(),
@@ -453,7 +493,7 @@ export default function ChatView() {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiverId: chatFriend.id, content, ...extra }),
+        body: JSON.stringify({ receiverId: chatFriend.id, content: finalContent, ...extra }),
       });
       if (res.ok) {
         const msg = await res.json();
@@ -462,12 +502,12 @@ export default function ChatView() {
         setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
         const err = await res.json();
         alert(err.error || 'Lỗi gửi tin nhắn');
-        setNewMsg(content);
+        setNewMsg(finalContent);
       }
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
       alert('Lỗi kết nối khi gửi tin nhắn');
-      setNewMsg(content);
+      setNewMsg(finalContent);
     } finally { setSending(false); sendingRef.current = false; setShowAttach(false); inputRef.current?.focus(); }
   };
 
@@ -620,12 +660,28 @@ export default function ChatView() {
               {new Date(m.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
             </p>
           )}
-          <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden ${isSticker ? 'bg-transparent shadow-none' :
+          {reactionMenuId === m.id && (
+            <div className="fixed inset-0 bg-black/30 z-40 transition-opacity" onClick={() => setReactionMenuId(null)} />
+          )}
+          <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} relative ${reactionMenuId === m.id ? 'z-50' : ''}`}>
+            {reactionMenuId === m.id && (
+              <div className={`absolute -top-12 flex gap-2.5 bg-white px-3 py-2.5 rounded-[20px] shadow-2xl border border-gray-100 z-50 animate-in slide-in-from-bottom-2 ${isMine ? 'right-0' : 'left-0'}`}>
+                {['👍', '❤️', '😂', '😲', '😢', '😡'].map(emoji => (
+                  <button key={emoji} onClick={(e) => { e.stopPropagation(); handleReaction(m.id, m.reaction === emoji ? '' : emoji); }} className="text-[26px] leading-none hover:scale-125 hover:-translate-y-1.5 transition-all">
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            <div 
+              onClick={() => setReactionMenuId(prev => prev === m.id ? null : m.id)}
+              className={`max-w-[80%] rounded-2xl text-sm leading-relaxed overflow-hidden cursor-pointer relative transition-all ${reactionMenuId === m.id ? 'ring-2 ring-blue-200' : ''} ${isSticker ? 'bg-transparent shadow-none' :
               isMine
                 ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
                 : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-md'
-              }`}>
+              }`}
+            >
               {/* Ảnh đính kèm */}
               {m.imageUrl && (
                 <div className={isSticker ? `flex flex-col items-${isMine ? 'end' : 'start'}` : "p-1"}>
@@ -757,6 +813,43 @@ export default function ChatView() {
                 </span>
               </div>
             </div>
+            {m.reaction && (
+              <div className={`absolute -bottom-3 ${isMine ? 'right-2' : 'right-0 md:-right-4'} bg-white shadow-sm border border-gray-100 rounded-full px-1.5 py-0.5 text-[12px] z-10 select-none animate-in zoom-in duration-200`}>
+                {m.reaction}
+              </div>
+            )}
+            {/* Context Menu Bottom */}
+            {reactionMenuId === m.id && (
+              <div className={`absolute top-full mt-3 w-max min-w-[220px] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 grid grid-cols-3 gap-2 z-50 animate-in slide-in-from-top-2 ${isMine ? 'right-0' : 'left-0'}`}>
+                <button onClick={(e) => { e.stopPropagation(); setReplyMsg(m); setReactionMenuId(null); setTimeout(() => inputRef.current?.focus(), 100); }} className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-[14px] hover:bg-gray-100 active:bg-gray-200 transition-colors group">
+                  <Reply size={22} className="text-blue-500 group-hover:-translate-y-0.5 transition-transform" />
+                  <span className="text-[10px] font-bold text-gray-700">Trả lời</span>
+                </button>
+                <button onClick={(e) => { 
+                  e.stopPropagation(); 
+                  try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(m.content || '');
+                    } else {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = m.content || '';
+                      document.body.appendChild(textArea);
+                      textArea.select();
+                      document.execCommand("copy");
+                      textArea.remove();
+                    }
+                  } catch (err) {}
+                  setReactionMenuId(null); 
+                }} className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-[14px] transition-colors group ${!m.content ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 active:bg-gray-200'}`} disabled={!m.content}>
+                  <Copy size={22} className="text-blue-500 group-hover:-translate-y-0.5 transition-transform" />
+                  <span className="text-[10px] font-bold text-gray-700">Sao chép</span>
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleRecallMessage(m.id); }} className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-[14px] transition-colors group ${!isMine ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 active:bg-gray-200'}`} disabled={!isMine}>
+                  <Trash2 size={22} className="text-red-500 group-hover:-translate-y-0.5 transition-transform" />
+                  <span className="text-[10px] font-bold text-gray-700">Thu hồi</span>
+                </button>
+              </div>
+            )}
           </div>
           {isLastMine && (
             <div className="flex justify-end mt-1 mb-2 pr-1">
@@ -776,7 +869,7 @@ export default function ChatView() {
         </div>
       );
     });
-  }, [messages, userId, processingTx, rejectingTxId, rejectReason, userRole, categoryLabels]);
+  }, [messages, userId, processingTx, rejectingTxId, rejectReason, userRole, categoryLabels, reactionMenuId]);
 
   // ═══ CHAT VIEW ═══
   if (chatFriend) {
@@ -1047,7 +1140,22 @@ export default function ChatView() {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          {/* Reply Context Box */}
+          <AnimatePresence>
+            {replyMsg && (
+              <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: 'auto', marginTop: 8 }} exit={{ opacity: 0, height: 0, marginTop: 0 }} className="bg-gray-100 border-l-[3px] border-blue-500 px-3 py-2 rounded-r-xl relative overflow-hidden flex items-center justify-between shadow-sm">
+                 <div className="flex flex-col min-w-0 pr-2">
+                   <span className="text-[11px] font-bold text-blue-600 truncate">Đang trả lời {replyMsg.senderId === userId ? 'chính mình' : chatFriend.name}</span>
+                   <span className="text-[11px] text-gray-500 truncate">{replyMsg.content || (replyMsg.transaction ? 'Giao dịch đính kèm' : 'Ảnh đính kèm')}</span>
+                 </div>
+                 <button onClick={() => setReplyMsg(null)} className="p-1 rounded-full bg-gray-200/80 text-gray-500 hover:text-gray-700 hover:bg-gray-300 transition-colors shrink-0">
+                    <X size={14} />
+                 </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center gap-2 mt-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => { 
@@ -1057,7 +1165,7 @@ export default function ChatView() {
               }}
               className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${showAttach ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
             >
-              <Paperclip size={18} />
+              {showAttach ? <Plus size={18} className="rotate-45 transition-transform duration-200" /> : <Paperclip size={18} />}
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}

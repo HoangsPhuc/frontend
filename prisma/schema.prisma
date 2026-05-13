@@ -157,5 +157,6 @@ model Message {
   transactionId String?      // Giao dịch đính kèm
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
   isRead        Boolean      @default(false)
+  reaction      String?      // Thả cảm xúc
   createdAt     DateTime     @default(now())
 }

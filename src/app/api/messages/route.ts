@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       const result = await sendPushToUser(receiverId, {
         title: `💬 ${senderName}`,
         options: {
-          body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || '📷 Ảnh / 📄 Giao dịch'),
+          body: msgContent.length > 60 ? msgContent.substring(0, 60) + '...' : (msgContent || (imageUrl?.includes('Animated-Fluent-Emojis') || imageUrl?.includes('fluentui-emoji') ? '[Sticker]' : (transactionId ? '[Giao dịch]' : '[Hình ảnh]'))),
           icon: session.user.avatarUrl || '/logo.jpg',
           badge: '/logo.jpg',
           vibrate: [200, 100, 200],
@@ -139,5 +139,49 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('POST /api/messages error:', error);
     return NextResponse.json({ error: 'Lỗi gửi tin nhắn' }, { status: 500 });
+  }
+}
+
+// PUT: Cập nhật cảm xúc (reaction)
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { messageId, reaction } = await request.json();
+    if (!messageId) return NextResponse.json({ error: 'Thiếu messageId' }, { status: 400 });
+
+    const message = await prisma.message.update({
+      where: { id: messageId },
+      data: { reaction },
+    });
+
+    return NextResponse.json(message);
+  } catch (error) {
+    console.error('PUT /api/messages error:', error);
+    return NextResponse.json({ error: 'Lỗi cập nhật cảm xúc' }, { status: 500 });
+  }
+}
+
+// DELETE: Thu hồi tin nhắn
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const url = new URL(request.url);
+    const messageId = url.searchParams.get('messageId');
+    if (!messageId) return NextResponse.json({ error: 'Thiếu messageId' }, { status: 400 });
+
+    const message = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.senderId !== session.user.id) {
+      return NextResponse.json({ error: 'Không thể thu hồi tin nhắn này' }, { status: 403 });
+    }
+
+    await prisma.message.delete({ where: { id: messageId } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('DELETE /api/messages error:', error);
+    return NextResponse.json({ error: 'Lỗi thu hồi tin nhắn' }, { status: 500 });
   }
 }
