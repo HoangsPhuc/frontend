@@ -46,7 +46,6 @@ const STICKER_CATEGORIES = [
     icon: '🥰',
     stickers: [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Hearts.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20Holding%20Back%20Tears.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pleading%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20Blowing%20a%20Kiss.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Star-Struck.png',
@@ -56,11 +55,10 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Partying%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Shushing%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Face%20with%20Peeking%20Eye.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Melting%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Saluting%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Red%20Heart.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Sparkling%20Heart.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Heart%20on%20Fire.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Heart%20on%20Fire.png'
     ]
   },
   {
@@ -75,7 +73,7 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Crying%20Cat.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pouting%20Cat.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Cat.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Black%20Cat.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Black%20Cat.png'
     ]
   },
   {
@@ -96,7 +94,7 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Clinking%20Beer%20Mugs.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Bubble%20Tea.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Cupcake.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Shortcake.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Food/Shortcake.png'
     ]
   },
   {
@@ -106,16 +104,13 @@ const STICKER_CATEGORIES = [
     stickers: [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Dog%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Monkey%20Face.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/See-No-Evil%20Monkey.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hear-No-Evil%20Monkey.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Speak-No-Evil%20Monkey.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Pig%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Rabbit%20Face.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hamster.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Hatching%20Chick.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Penguin.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Frog.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Turtle.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Turtle.png'
     ]
   },
   {
@@ -132,7 +127,7 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/OK%20Hand.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Call%20Me%20Hand.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Sign%20of%20the%20Horns.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Index%20Pointing%20Up.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Hand%20gestures/Index%20Pointing%20Up.png'
     ]
   },
   {
@@ -152,8 +147,8 @@ const STICKER_CATEGORIES = [
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Check%20Mark%20Button.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Cross%20Mark%20Button.png',
       'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Warning.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Hundred%20Points.png',
-      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Symbols/Anger%20Symbol.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Hundred%20Points.png',
+      'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Anger%20Symbol.png'
     ]
   }
 ];
@@ -200,6 +195,23 @@ export default function ChatView() {
 
   // Custom confirm modal state
   const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  const [recentStickers, setRecentStickers] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('recentStickers');
+      if (stored) setRecentStickers(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const addRecentSticker = (url: string) => {
+    setRecentStickers(prev => {
+      const next = [url, ...prev.filter(u => u !== url)].slice(0, 16);
+      localStorage.setItem('recentStickers', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const fetchFriends = useCallback(async () => {
     try {
@@ -593,10 +605,14 @@ export default function ChatView() {
 
   // Memoize rendered messages to prevent re-rendering the entire list on every keystroke
   const renderedMessages = useMemo(() => {
+    const lastMyMsgIndex = [...messages].reverse().findIndex(m => m.senderId === userId);
+    const actualLastMyMsgIndex = lastMyMsgIndex !== -1 ? messages.length - 1 - lastMyMsgIndex : -1;
+
     return messages.map((m, i) => {
       const isMine = m.senderId === userId;
       const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
       const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
+      const isLastMine = isMine && i === actualLastMyMsgIndex;
       return (
         <div key={m.id}>
           {showTime && (
@@ -739,10 +755,24 @@ export default function ChatView() {
                 <span className={`text-[10px] font-medium ${isSticker ? 'text-gray-400' : isMine ? 'text-blue-100' : 'text-gray-500'}`}>
                   {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                 </span>
-                {isMine && !isSticker && (m.isRead ? <CheckCheck size={12} className="text-blue-200" /> : <Check size={12} className="text-blue-300" />)}
               </div>
             </div>
           </div>
+          {isLastMine && (
+            <div className="flex justify-end mt-1 mb-2 pr-1">
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-200/80 text-gray-500 text-[10px] font-bold rounded-full shadow-sm">
+                {m.isRead ? (
+                  <>
+                    <CheckCheck size={12} strokeWidth={2.5} /> Đã nhận
+                  </>
+                ) : (
+                  <>
+                    <Check size={12} strokeWidth={2.5} /> Đã gửi
+                  </>
+                )}
+              </span>
+            </div>
+          )}
         </div>
       );
     });
@@ -928,15 +958,12 @@ export default function ChatView() {
                 style={{ transformOrigin: 'bottom center' }}
               >
                 {/* Header Zalo style */}
-                <div className="flex bg-white px-2 mt-1">
+                <div className="flex bg-white px-2 mt-1 border-b border-gray-100">
                   <button className="flex-1 py-2.5 text-[13px] font-bold text-blue-600 border-b-[3px] border-blue-600 text-center uppercase tracking-wide">
                     Sticker
                   </button>
                   <button className="flex-1 py-2.5 text-[13px] font-bold text-gray-400 text-center uppercase tracking-wide hover:text-gray-600 transition-colors">
                     Emoji
-                  </button>
-                  <button className="flex-1 py-2.5 text-[13px] font-bold text-gray-400 text-center uppercase tracking-wide hover:text-gray-600 transition-colors">
-                    GIF
                   </button>
                 </div>
 
@@ -951,37 +978,47 @@ export default function ChatView() {
                 {/* Stickers Grid */}
                 <div className="p-3 bg-white flex-1 overflow-y-auto max-h-[200px] overscroll-contain">
                   <h4 className="text-sm font-bold text-gray-800 mb-3 px-1">
-                    {STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.name || 'Gần đây'}
+                    {activeStickerTab === 'recent' ? 'Gần đây' : STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.name}
                   </h4>
-                  <div className="grid grid-cols-4 gap-2">
-                    {STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.stickers.map((stickerUrl, idx) => (
-                      <button
-                        key={idx}
-                        onPointerUp={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (sendingRef.current) return;
-                          setShowStickers(false);
-                          sendMessage({ imageUrl: stickerUrl });
-                        }}
-                        className="w-full aspect-square p-2 rounded-2xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-colors"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={stickerUrl}
-                          alt="sticker"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-contain pointer-events-none drop-shadow-sm hover:scale-110 transition-transform"
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  {activeStickerTab === 'recent' && recentStickers.length === 0 ? (
+                    <div className="text-center text-sm text-gray-400 py-6">Chưa có sticker nào dùng gần đây</div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {(activeStickerTab === 'recent' ? recentStickers : STICKER_CATEGORIES.find(c => c.id === activeStickerTab)?.stickers || [])?.map((stickerUrl, idx) => (
+                        <button
+                          key={idx}
+                          onPointerUp={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (sendingRef.current) return;
+                            setShowStickers(false);
+                            addRecentSticker(stickerUrl);
+                            sendMessage({ imageUrl: stickerUrl });
+                          }}
+                          className="w-full aspect-square p-2 rounded-2xl hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-colors"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={stickerUrl}
+                            alt="sticker"
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-contain pointer-events-none drop-shadow-sm hover:scale-110 transition-transform"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Bottom Icon Tabs */}
                 <div className="flex items-center overflow-x-auto no-scrollbar border-t border-gray-100 bg-gray-50/80 px-2 py-1.5 gap-1 shrink-0">
-                  <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors shrink-0"><Clock size={18} strokeWidth={2.5} /></button>
+                  <button 
+                    onClick={() => setActiveStickerTab('recent')}
+                    className={`p-2 transition-colors shrink-0 ${activeStickerTab === 'recent' ? 'text-blue-500 bg-blue-50 rounded-xl' : 'text-gray-400 hover:text-blue-500'}`}
+                  >
+                    <Clock size={18} strokeWidth={2.5} />
+                  </button>
                   <div className="w-[1px] h-5 bg-gray-300 mx-1 shrink-0" />
                   {STICKER_CATEGORIES.map((cat) => (
                     <button
