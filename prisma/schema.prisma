@@ -158,5 +158,8 @@ model Message {
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
   isRead        Boolean      @default(false)
   reaction      String?      // Thả cảm xúc
+  replyToId     String?      // ID tin nhắn đang trả lời
+  replyTo       Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       Message[]    @relation("MessageReply")
   createdAt     DateTime     @default(now())
 }

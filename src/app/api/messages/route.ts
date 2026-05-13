@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
       include: {
         transaction: {
           select: { id: true, type: true, category: true, amount: true, status: true, transferContent: true, date: true, accountInfo: true, bankName: true, accountNumber: true, accountOwner: true, qrCodeUrl: true, note: true }
+        },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, imageUrl: true }
         }
       },
       orderBy: { createdAt: 'desc' },
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { receiverId, content, imageUrl, transactionId } = await request.json();
+    const { receiverId, content, imageUrl, transactionId, replyToId } = await request.json();
     if (!receiverId || (!content?.trim() && !imageUrl && !transactionId)) {
       return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 });
     }
@@ -98,10 +101,14 @@ export async function POST(request: NextRequest) {
         content: content?.trim() || '',
         imageUrl: imageUrl || null,
         transactionId: transactionId || null,
+        replyToId: replyToId || null,
       },
       include: {
         transaction: {
           select: { id: true, type: true, category: true, amount: true, status: true, transferContent: true, date: true, accountInfo: true, bankName: true, accountNumber: true, accountOwner: true, qrCodeUrl: true, note: true }
+        },
+        replyTo: {
+          select: { id: true, content: true, senderId: true, imageUrl: true }
         }
       },
     });

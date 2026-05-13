@@ -22,8 +22,9 @@ interface Msg {
   imageUrl?: string | null; transactionId?: string | null;
   transaction?: {
     id: string; type: string; category: string; amount: number; status: string; transferContent?: string; date: string;
-    accountInfo?: string | null; bankName?: string | null; accountNumber?: string | null; accountOwner?: string | null; qrCodeUrl?: string | null; note?: string | null;
   } | null;
+  replyToId?: string | null;
+  replyTo?: { id: string; content: string; senderId: string; imageUrl?: string | null } | null;
   isRead: boolean; createdAt: string;
   reaction?: string | null;
 }
@@ -459,11 +460,15 @@ export default function ChatView() {
     if (!chatFriend || sending || sendingRef.current) return;
     if (!newMsg.trim() && !extra?.imageUrl && !extra?.transactionId) return;
 
-    let finalContent = newMsg.trim();
-    if (replyMsg && finalContent) {
-      finalContent = `[Trả lời ${replyMsg.senderId === userId ? 'bạn' : chatFriend.name}: "${replyMsg.content ? (replyMsg.content.length > 20 ? replyMsg.content.substring(0, 20) + '...' : replyMsg.content) : 'Đính kèm'}"]\n\n${finalContent}`;
-      setReplyMsg(null);
-    }
+    const finalContent = newMsg.trim();
+    const replyData = replyMsg ? {
+      id: replyMsg.id,
+      content: replyMsg.content,
+      senderId: replyMsg.senderId,
+      imageUrl: replyMsg.imageUrl
+    } : null;
+    const currentReplyId = replyMsg?.id || null;
+    setReplyMsg(null);
 
     setNewMsg('');
     setSending(true);
@@ -484,6 +489,8 @@ export default function ChatView() {
       content: finalContent,
       imageUrl: extra?.imageUrl || null,
       transactionId: extra?.transactionId || null,
+      replyToId: currentReplyId,
+      replyTo: replyData,
       createdAt: new Date().toISOString(),
       isRead: true
     };
@@ -493,7 +500,7 @@ export default function ChatView() {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiverId: chatFriend.id, content: finalContent, ...extra }),
+        body: JSON.stringify({ receiverId: chatFriend.id, content: finalContent, replyToId: currentReplyId, ...extra }),
       });
       if (res.ok) {
         const msg = await res.json();
@@ -653,8 +660,9 @@ export default function ChatView() {
       const isSticker = m.imageUrl && (m.imageUrl.includes('fluentui-emoji') || m.imageUrl.includes('Animated-Fluent-Emojis'));
       const showTime = i === 0 || new Date(m.createdAt).getTime() - new Date(messages[i - 1].createdAt).getTime() > 300000;
       const isLastMine = isMine && i === actualLastMyMsgIndex;
+      const isNearBottom = i >= messages.length - 2;
       return (
-        <div key={m.id}>
+        <div key={m.id} id={`msg-${m.id}`}>
           {showTime && (
             <p className="text-center text-[10px] text-gray-400 my-1.5 font-medium">
               {new Date(m.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
@@ -804,9 +812,35 @@ export default function ChatView() {
                   </div>
                 </div>
               )}
+              {/* Giao dịch đính kèm */}
+              {/* Nội dung trả lời (Reply Context Native) */}
+              {m.replyTo && (
+                <div 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const el = document.getElementById(`msg-${m.replyTo!.id}`);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      const bubble = el.querySelector('.max-w-\\[80\\%\\]');
+                      if (bubble) {
+                        bubble.classList.add('ring-4', 'ring-yellow-300/50', 'bg-yellow-50', 'transition-all', 'duration-500');
+                        setTimeout(() => bubble.classList.remove('ring-4', 'ring-yellow-300/50', 'bg-yellow-50'), 1500);
+                      }
+                    }
+                  }}
+                  className={`border-l-[3px] rounded-r-lg px-2.5 py-1.5 mt-1.5 mx-1.5 cursor-pointer hover:opacity-80 transition-all active:scale-[0.98] select-none ${isMine ? 'border-blue-200 bg-black/10' : 'border-blue-400 bg-blue-50/70'}`}
+                >
+                  <p className={`text-[11px] font-bold ${isMine ? 'text-blue-50' : 'text-blue-600'}`}>
+                    {m.replyTo.senderId === userId ? 'Bạn' : chatFriend?.name}
+                  </p>
+                  <p className={`text-[11px] truncate mt-0.5 line-clamp-2 whitespace-normal leading-relaxed ${isMine ? 'text-white/80' : 'text-gray-600'}`}>
+                    {m.replyTo.content || (m.replyTo.imageUrl ? '[Hình ảnh đính kèm]' : '[Đính kèm]')}
+                  </p>
+                </div>
+              )}
               {/* Nội dung text */}
               {m.content && <div className="px-3.5 pt-2 pb-0.5 leading-relaxed whitespace-pre-wrap break-words">{m.content}</div>}
-              {!m.content && (m.imageUrl || m.transaction) && <div className="h-1" />}
+              {!m.content && (m.imageUrl || m.transaction || m.replyTo) && <div className="h-1" />}
               <div className={`flex items-center gap-1 px-3.5 pb-1.5 pt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <span className={`text-[10px] font-medium ${isSticker ? 'text-gray-400' : isMine ? 'text-blue-100' : 'text-gray-500'}`}>
                   {new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
@@ -818,9 +852,9 @@ export default function ChatView() {
                 {m.reaction}
               </div>
             )}
-            {/* Context Menu Bottom */}
+            {/* Context Menu Bottom / Top */}
             {reactionMenuId === m.id && (
-              <div className={`absolute top-full mt-3 w-max min-w-[220px] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 grid grid-cols-3 gap-2 z-50 animate-in slide-in-from-top-2 ${isMine ? 'right-0' : 'left-0'}`}>
+              <div className={`absolute w-max min-w-[220px] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 grid grid-cols-3 gap-2 z-50 animate-in ${isNearBottom ? 'bottom-full mb-[56px] slide-in-from-bottom-2' : 'top-full mt-3 slide-in-from-top-2'} ${isMine ? 'right-0' : 'left-0'}`}>
                 <button onClick={(e) => { e.stopPropagation(); setReplyMsg(m); setReactionMenuId(null); setTimeout(() => inputRef.current?.focus(), 100); }} className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-[14px] hover:bg-gray-100 active:bg-gray-200 transition-colors group">
                   <Reply size={22} className="text-blue-500 group-hover:-translate-y-0.5 transition-transform" />
                   <span className="text-[10px] font-bold text-gray-700">Trả lời</span>
