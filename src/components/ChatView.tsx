@@ -22,6 +22,7 @@ interface Msg {
   imageUrl?: string | null; transactionId?: string | null;
   transaction?: {
     id: string; type: string; category: string; amount: number; status: string; transferContent?: string; date: string;
+    accountInfo?: string | null; bankName?: string | null; accountNumber?: string | null; accountOwner?: string | null; qrCodeUrl?: string | null; note?: string | null;
   } | null;
   replyToId?: string | null;
   replyTo?: { id: string; content: string; senderId: string; imageUrl?: string | null } | null;
