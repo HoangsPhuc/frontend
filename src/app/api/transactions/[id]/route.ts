@@ -27,7 +27,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { type, category, amount, transferContent, accountInfo, bankName, accountNumber, accountOwner, bankAccountId, qrCodeUrl, note, date, partnerId, status, rejectReason } = body;
+    const { type, category, amount, customerName, transferContent, accountInfo, bankName, accountNumber, accountOwner, bankAccountId, qrCodeUrl, note, date, partnerId, status, rejectReason } = body;
 
     // Kiểm tra giao dịch tồn tại
     const existing = await prisma.transaction.findUnique({ where: { id } });
@@ -37,6 +37,19 @@ export async function PUT(
 
     if (session.user.role === 'STAFF') {
       return NextResponse.json({ error: 'Bạn không có quyền sửa trực tiếp, vui lòng gửi yêu cầu sửa' }, { status: 403 });
+    }
+
+    // Auto-save customer if provided
+    if (customerName && customerName.trim()) {
+      try {
+        await prisma.customer.upsert({
+          where: { name: customerName.trim() },
+          update: { updatedAt: new Date() },
+          create: { name: customerName.trim() },
+        });
+      } catch (e) {
+        console.error('Lỗi auto-save khách hàng:', e);
+      }
     }
 
     // Xử lý khi Admin duyệt/từ chối YÊU CẦU SỬA
@@ -50,6 +63,7 @@ export async function PUT(
               type: existing.type,
               category: existing.category,
               amount: existing.amount,
+              customerName: existing.customerName,
               transferContent: existing.transferContent,
               accountInfo: existing.accountInfo,
               bankName: existing.bankName,
@@ -128,6 +142,7 @@ export async function PUT(
         ...(type && { type }),
         ...(category && { category }),
         ...(amount && { amount: parseFloat(amount) }),
+        ...(customerName !== undefined && { customerName: customerName ? customerName.trim() : null }),
         ...(transferContent !== undefined && { transferContent }),
         ...(accountInfo !== undefined && { accountInfo }),
         ...(bankName !== undefined && { bankName }),

@@ -9,12 +9,23 @@ datasource db {
   provider = "sqlite"
 }
 
+// Khách hàng (lưu để gợi ý autocomplete khi thu nợ)
+model Customer {
+  id        String   @id @default(cuid())
+  name      String   @unique // Tên khách hàng (duy nhất)
+  phone     String?  // Số điện thoại (tuỳ chọn)
+  note      String?  // Ghi chú
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Giao dịch tài chính (Thu / Chi)
 model Transaction {
   id          String   @id @default(cuid())
   type        String   // "THU" hoặc "CHI"
   category    String   // Danh mục: "tien_xang", "ban_hang", "thu_no", "tra_no_vuon", "nhap_hang", "khac"
   amount      Float    // Số tiền (luôn dương, type xác định thu/chi)
+  customerName    String?  // Tên khách hàng (dùng cho thu nợ)
   transferContent String?  // Nội dung chuyển khoản (thay cho mô tả cũ)
   accountInfo     String?  // Thông tin tài khoản ngân hàng (cũ)
   bankName        String?  // Tên ngân hàng

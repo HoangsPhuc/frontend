@@ -33,6 +33,7 @@ export interface TransactionData {
   amount: string;
   transferContent: string;
   accountInfo: string;
+  customerName?: string;
   bankName: string;
   accountNumber: string;
   accountOwner: string;
@@ -100,6 +101,9 @@ export default function TransactionForm({
   const [amount, setAmount] = useState('');
   const [transferContent, setTransferContent] = useState('');
   const [accountInfo, setAccountInfo] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountOwner, setAccountOwner] = useState('');
@@ -136,6 +140,7 @@ export default function TransactionForm({
         const parsedAmount = parseInt(String(editData.amount).replace(/\D/g, ''), 10);
         setAmount(!isNaN(parsedAmount) && parsedAmount > 0 ? parsedAmount.toLocaleString('vi-VN') : '');
         setTransferContent(editData.transferContent || '');
+        setCustomerName(editData.customerName || '');
         setAccountInfo(editData.accountInfo || '');
         setBankName(editData.bankName || '');
         setAccountNumber(editData.accountNumber || '');
@@ -150,6 +155,7 @@ export default function TransactionForm({
         setCategory('');
         setCustomCategory('');
         setAmount('');
+        setCustomerName('');
         setTransferContent('');
         setAccountInfo('');
         setBankName('');
@@ -202,15 +208,21 @@ export default function TransactionForm({
       const hasAllBankFields = !!(bName && aNum && aOwner);
       const hasQR = !!qrCodeUrl;
 
+      const isThuNo = type === 'THU' && category === 'thu_no';
+
       if (hasAnyBankField && !hasAllBankFields) {
         setBankError('Vui lòng nhập đầy đủ Tên ngân hàng, Số tài khoản và Chủ tài khoản.');
         return;
       }
       setBankError('');
 
-      if (!isAdmin && type === 'CHI' && !hasAllBankFields && !hasQR) {
+      if (!isAdmin && type === 'CHI' && !hasAllBankFields && !hasQR && !isThuNo) {
         setErrorMsg('Vui lòng nhập đủ thông tin Ngân hàng HOẶC tải ảnh Mã QR để Quản trị viên thanh toán!');
         return;
+      }
+      if (isThuNo && !customerName.trim()) {
+         setErrorMsg('Vui lòng nhập tên khách hàng cho giao dịch Thu Nợ!');
+         return;
       }
     }
     setErrorMsg('');
@@ -278,6 +290,7 @@ export default function TransactionForm({
         type,
         category: finalCategory,
         amount: rawAmount,
+        customerName: customerName.trim(),
         transferContent,
         accountInfo,
         bankName,
@@ -307,6 +320,29 @@ export default function TransactionForm({
     if (!raw) setAmount('');
     else setAmount(parseInt(raw, 10).toLocaleString('vi-VN'));
   };
+
+  const handleCustomerNameChange = async (val: string) => {
+    setCustomerName(val);
+    if (val.trim().length > 0) {
+      try {
+        const res = await fetch(`/api/customers?q=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        setCustomerSuggestions(data);
+        setShowCustomerDropdown(true);
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      setCustomerSuggestions([]);
+      setShowCustomerDropdown(false);
+    }
+  };
+
+  const selectCustomer = (name: string) => {
+    setCustomerName(name);
+    setShowCustomerDropdown(false);
+  };
+
 
   const currentCategories = categories[type];
 
@@ -577,26 +613,95 @@ export default function TransactionForm({
                     <div className="space-y-5">
                       {/* 1. Nguồn tiền hệ thống (Ví của mình) */}
                       {isAdmin && bankAccounts.length > 0 && (
-                        <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
-                          <label className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                        <div className={`border rounded-2xl p-4 ${type === 'THU' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>
+                          <label className={`text-[11px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5 ${type === 'THU' ? 'text-emerald-700' : 'text-red-700'}`}>
                             <Wallet size={14} />
-                            Nguồn Tiền Hệ Thống
+                            {type === 'THU' ? 'Cộng tiền vào' : 'Trừ tiền từ'}
                           </label>
-                          <select
-                            value={bankAccountId}
-                            onChange={(e) => setBankAccountId(e.target.value)}
-                            className="w-full px-4 py-3.5 rounded-xl border-2 border-blue-200/50 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all appearance-none"
-                            style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
-                          >
-                            <option value="">-- Tự động / Chọn sau --</option>
-                            {bankAccounts.map(acc => (
-                              <option key={acc.id} value={acc.id}>{acc.name} (Dư: {acc.balance?.toLocaleString('vi-VN')}đ)</option>
-                            ))}
-                          </select>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setBankAccountId('')}
+                              className={`w-full px-4 py-3 rounded-xl border flex items-center justify-between transition-colors text-sm font-medium ${
+                                !bankAccountId 
+                                  ? (type === 'THU' ? 'bg-emerald-100 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500' : 'bg-red-100 border-red-500 text-red-800 ring-1 ring-red-500')
+                                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span>-- Tự động / Chọn sau --</span>
+                              {!bankAccountId && <Check size={16} className={type === 'THU' ? 'text-emerald-600' : 'text-red-600'} />}
+                            </button>
+                            {bankAccounts.map(acc => {
+                              const isSelected = bankAccountId === acc.id;
+                              return (
+                                <button
+                                  key={acc.id}
+                                  type="button"
+                                  onClick={() => setBankAccountId(acc.id)}
+                                  className={`w-full px-4 py-3 rounded-xl border flex items-center justify-between transition-colors text-sm ${
+                                    isSelected 
+                                      ? (type === 'THU' ? 'bg-emerald-100 border-emerald-500 ring-1 ring-emerald-500' : 'bg-red-100 border-red-500 ring-1 ring-red-500')
+                                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-start">
+                                    <span className={`font-semibold ${isSelected ? (type === 'THU' ? 'text-emerald-900' : 'text-red-900') : 'text-gray-900'}`}>{acc.name}</span>
+                                    <span className={`text-xs ${isSelected ? (type === 'THU' ? 'text-emerald-700' : 'text-red-700') : 'text-gray-500'}`}>
+                                      Dư: {acc.balance?.toLocaleString('vi-VN')}đ
+                                    </span>
+                                  </div>
+                                  {isSelected && <Check size={18} className={type === 'THU' ? 'text-emerald-600' : 'text-red-600'} />}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
 
-                      {/* 2. Thông tin ngân hàng đối tác */}
+                      {/* 2. Thông tin khách hàng (Dành cho Thu Nợ) */}
+                      {type === 'THU' && category === 'thu_no' && (
+                        <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 relative">
+                           <label className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Khách hàng <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => handleCustomerNameChange(e.target.value)}
+                            onFocus={(e) => {
+                               scrollToFocused(e);
+                               if (customerName.trim().length > 0) setShowCustomerDropdown(true);
+                            }}
+                            onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                            placeholder="Tên khách hàng..."
+                            className="w-full px-4 py-3.5 rounded-xl border-2 border-blue-200/50 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                          />
+                          <AnimatePresence>
+                            {showCustomerDropdown && customerSuggestions.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute z-20 left-4 right-4 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                              >
+                                {customerSuggestions.map(cust => (
+                                  <div
+                                    key={cust.id}
+                                    onClick={() => selectCustomer(cust.name)}
+                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-none"
+                                  >
+                                    <div className="font-semibold">{cust.name}</div>
+                                    {cust.phone && <div className="text-xs text-gray-500">{cust.phone}</div>}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+
+                      {/* 3. Thông tin ngân hàng đối tác */}
                       <div className={`bg-gray-50 border rounded-2xl p-4 transition-colors ${bankError ? 'border-red-300' : 'border-gray-100'}`}>
                         <div className="flex items-center justify-between mb-3">
                           <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -766,6 +871,14 @@ export default function TransactionForm({
                               : (categoryLabels[category] || category)}
                           </span>
                         </div>
+                        {customerName && (
+                          <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+                            <span className="text-sm text-gray-400">Khách hàng</span>
+                            <span className="text-sm font-semibold text-gray-800 text-right max-w-[60%] truncate">
+                              {customerName}
+                            </span>
+                          </div>
+                        )}
                         {isAdmin && bankAccountId && (
                           <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
                             <span className="text-sm text-gray-400">Nguồn tiền</span>

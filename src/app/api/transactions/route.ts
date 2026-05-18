@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { type, category, amount, transferContent, accountInfo, bankName, accountNumber, accountOwner, bankAccountId, qrCodeUrl, note, date, partnerId, isEditRequest, originalTransactionId } = body;
+    const { type, category, amount, customerName, transferContent, accountInfo, bankName, accountNumber, accountOwner, bankAccountId, qrCodeUrl, note, date, partnerId, isEditRequest, originalTransactionId } = body;
 
     // Validation
     if (!type || !category || !amount) {
@@ -84,11 +84,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Auto-save customer if provided
+    if (customerName && customerName.trim()) {
+      try {
+        await prisma.customer.upsert({
+          where: { name: customerName.trim() },
+          update: { updatedAt: new Date() },
+          create: { name: customerName.trim() },
+        });
+      } catch (e) {
+        console.error('Lỗi auto-save khách hàng:', e);
+      }
+    }
+
     const transaction = await prisma.transaction.create({
       data: {
         type,
         category,
         amount: parseFloat(amount),
+        customerName: customerName ? customerName.trim() : null,
         transferContent: transferContent || null,
         accountInfo: accountInfo || null,
         bankName: bankName || null,

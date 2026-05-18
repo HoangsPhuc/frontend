@@ -69,6 +69,7 @@ interface Transaction {
   type: string;
   category: string;
   amount: number;
+  customerName?: string | null;
   transferContent: string | null;
   accountInfo: string | null;
   bankName?: string | null;
@@ -1000,7 +1001,7 @@ export default function DashboardView() {
                                       }`}>
                                       {isAdmin && tx.user?.name && <span className="font-bold text-blue-600 mr-1">{tx.user.name}:</span>}
                                       {tx.isEditRequest && <span className="text-purple-500 font-bold mr-1">[SỬA]</span>}
-                                      {tx.transferContent || categoryLabels[tx.category] || tx.category}
+                                      {tx.customerName ? `Khách hàng: ${tx.customerName}` : (tx.transferContent || categoryLabels[tx.category] || tx.category)}
                                     </p>
                                     <div className="flex items-center gap-2 mt-0.5">
                                       {tx.note ? (
@@ -1433,7 +1434,7 @@ export default function DashboardView() {
                                       }`}>
                                       {tx.user?.name && <span className="font-bold text-blue-600 mr-1">{tx.user.name}:</span>}
                                       {tx.isEditRequest && <span className="text-purple-500 font-bold mr-1">[SỬA]</span>}
-                                      {tx.transferContent || categoryLabels[tx.category] || tx.category}
+                                      {tx.customerName ? `Khách hàng: ${tx.customerName}` : (tx.transferContent || categoryLabels[tx.category] || tx.category)}
                                     </p>
                                     <div className="flex items-center gap-2 mt-0.5">
                                       <p className="text-[10px] text-gray-400">
@@ -1517,10 +1518,11 @@ export default function DashboardView() {
                 </div>
 
                 <div className="px-5 py-4 space-y-4 overflow-y-auto min-h-[100px]">
-                  {(detailTx.bankName || detailTx.accountNumber || detailTx.accountOwner || detailTx.accountInfo) && (
+                  {(detailTx.bankName || detailTx.accountNumber || detailTx.accountOwner || detailTx.accountInfo || detailTx.customerName) && (
                     <div>
-                      <p className="text-xs text-gray-400 font-medium mb-1">Tài Khoản / Người Nhận</p>
+                      <p className="text-xs text-gray-400 font-medium mb-1">Tài Khoản / Khách Hàng</p>
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-1">
+                        {detailTx.customerName && <p className="text-sm font-semibold text-gray-800 break-words"><span className="text-gray-500 font-normal mr-1">Khách hàng:</span>{detailTx.customerName}</p>}
                         {detailTx.bankName && <p className="text-sm font-semibold text-gray-800 break-words"><span className="text-gray-500 font-normal mr-1">Ngân hàng:</span>{detailTx.bankName}</p>}
                         {detailTx.accountNumber && <p className="text-sm font-semibold text-gray-800 break-words"><span className="text-gray-500 font-normal mr-1">STK:</span>{detailTx.accountNumber}</p>}
                         {detailTx.accountOwner && <p className="text-sm font-semibold text-gray-800 break-words"><span className="text-gray-500 font-normal mr-1">Chủ TK:</span>{detailTx.accountOwner}</p>}
@@ -1582,18 +1584,48 @@ export default function DashboardView() {
                   {isAdmin && detailTx.status === 'PENDING' ? (
                     <>
                       {bankAccounts.length > 0 && (
-                        <div className="mb-1">
-                          <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">Nguồn tiền / Tài khoản:</label>
-                          <select
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 outline-none"
-                            value={selectedBankAccountId}
-                            onChange={(e) => setSelectedBankAccountId(e.target.value)}
-                          >
-                            <option value="">-- Chọn tài khoản --</option>
-                            {bankAccounts.map(acc => (
-                              <option key={acc.id} value={acc.id}>{acc.name} ({formatFullCurrency(acc.balance)})</option>
-                            ))}
-                          </select>
+                        <div className={`mb-3 p-3 rounded-2xl border ${detailTx.type === 'THU' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>
+                          <label className={`text-xs font-bold uppercase block mb-2 flex items-center gap-1.5 ${detailTx.type === 'THU' ? 'text-emerald-700' : 'text-red-700'}`}>
+                            <Wallet size={14} />
+                            {detailTx.type === 'THU' ? 'Cộng tiền vào' : 'Trừ tiền từ'}
+                          </label>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBankAccountId('')}
+                              className={`w-full px-3 py-2.5 rounded-xl border flex items-center justify-between transition-colors text-sm font-medium ${
+                                !selectedBankAccountId 
+                                  ? (detailTx.type === 'THU' ? 'bg-emerald-100 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500' : 'bg-red-100 border-red-500 text-red-800 ring-1 ring-red-500')
+                                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span>-- Chọn tài khoản --</span>
+                              {!selectedBankAccountId && <Check size={16} className={detailTx.type === 'THU' ? 'text-emerald-600' : 'text-red-600'} />}
+                            </button>
+                            {bankAccounts.map(acc => {
+                              const isSelected = selectedBankAccountId === acc.id;
+                              return (
+                                <button
+                                  key={acc.id}
+                                  type="button"
+                                  onClick={() => setSelectedBankAccountId(acc.id)}
+                                  className={`w-full px-3 py-2.5 rounded-xl border flex items-center justify-between transition-colors text-sm ${
+                                    isSelected 
+                                      ? (detailTx.type === 'THU' ? 'bg-emerald-100 border-emerald-500 ring-1 ring-emerald-500' : 'bg-red-100 border-red-500 ring-1 ring-red-500')
+                                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-start">
+                                    <span className={`font-semibold ${isSelected ? (detailTx.type === 'THU' ? 'text-emerald-900' : 'text-red-900') : 'text-gray-900'}`}>{acc.name}</span>
+                                    <span className={`text-[11px] ${isSelected ? (detailTx.type === 'THU' ? 'text-emerald-700' : 'text-red-700') : 'text-gray-500'}`}>
+                                      Dư: {formatFullCurrency(acc.balance)}
+                                    </span>
+                                  </div>
+                                  {isSelected && <Check size={16} className={detailTx.type === 'THU' ? 'text-emerald-600' : 'text-red-600'} />}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                       <div className="flex gap-3">
