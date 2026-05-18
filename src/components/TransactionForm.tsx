@@ -242,7 +242,9 @@ export default function TransactionForm({
 
   const canProceed = () => {
     switch (step) {
-      case 0: return !!category && (category === 'thu_khac' || category === 'chi_khac' ? !!customCategory.trim() : true);
+      case 0: 
+        if (type === 'THU' && category === 'thu_no' && !customerName.trim()) return false;
+        return !!category && (category === 'thu_khac' || category === 'chi_khac' ? !!customCategory.trim() : true);
       case 1: return !!amount && parseInt(amount.replace(/\D/g, ''), 10) > 0;
       case 2: return !!date && !uploadingQr; // Require date and wait for QR upload
       case 3: return true;
@@ -553,6 +555,57 @@ export default function TransactionForm({
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* Input cho Khách hàng (Thu Nợ) */}
+                    <AnimatePresence>
+                      {type === 'THU' && category === 'thu_no' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                          animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                          className="overflow-hidden relative"
+                        >
+                          <label className="block text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Tên khách hàng <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => handleCustomerNameChange(e.target.value)}
+                            onFocus={(e) => {
+                               scrollToFocused(e);
+                               if (customerName.trim().length > 0) setShowCustomerDropdown(true);
+                            }}
+                            onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                            placeholder="Nhập tên khách hàng để lưu..."
+                            className="w-full px-4 py-3 rounded-xl border border-blue-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                            autoFocus
+                          />
+                          <AnimatePresence>
+                            {showCustomerDropdown && customerSuggestions.length > 0 && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                              >
+                                {customerSuggestions.map(cust => (
+                                  <div
+                                    key={cust.id}
+                                    onClick={() => selectCustomer(cust.name)}
+                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-none"
+                                  >
+                                    <div className="font-semibold">{cust.name}</div>
+                                    {cust.phone && <div className="text-xs text-gray-500">{cust.phone}</div>}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 )}
 
@@ -658,50 +711,7 @@ export default function TransactionForm({
                         </div>
                       )}
 
-                      {/* 2. Thông tin khách hàng (Dành cho Thu Nợ) */}
-                      {type === 'THU' && category === 'thu_no' && (
-                        <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 relative">
-                           <label className="text-[11px] font-bold text-blue-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            Khách hàng <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={customerName}
-                            onChange={(e) => handleCustomerNameChange(e.target.value)}
-                            onFocus={(e) => {
-                               scrollToFocused(e);
-                               if (customerName.trim().length > 0) setShowCustomerDropdown(true);
-                            }}
-                            onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                            placeholder="Tên khách hàng..."
-                            className="w-full px-4 py-3.5 rounded-xl border-2 border-blue-200/50 bg-white text-sm text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
-                          />
-                          <AnimatePresence>
-                            {showCustomerDropdown && customerSuggestions.length > 0 && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute z-20 left-4 right-4 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
-                              >
-                                {customerSuggestions.map(cust => (
-                                  <div
-                                    key={cust.id}
-                                    onClick={() => selectCustomer(cust.name)}
-                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-none"
-                                  >
-                                    <div className="font-semibold">{cust.name}</div>
-                                    {cust.phone && <div className="text-xs text-gray-500">{cust.phone}</div>}
-                                  </div>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      )}
-
-                      {/* 3. Thông tin ngân hàng đối tác */}
+                      {/* 2. Thông tin ngân hàng đối tác */}
                       <div className={`bg-gray-50 border rounded-2xl p-4 transition-colors ${bankError ? 'border-red-300' : 'border-gray-100'}`}>
                         <div className="flex items-center justify-between mb-3">
                           <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
