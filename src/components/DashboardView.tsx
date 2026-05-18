@@ -611,11 +611,13 @@ export default function DashboardView() {
       type: tx.type as 'THU' | 'CHI',
       category: tx.category,
       amount: String(tx.amount),
+      customerName: tx.customerName || '',
       transferContent: tx.transferContent || '',
       accountInfo: tx.accountInfo || '',
       bankName: tx.bankName || '',
       accountNumber: tx.accountNumber || '',
       accountOwner: tx.accountOwner || '',
+      bankAccountId: tx.bankAccountId || '',
       qrCodeUrl: tx.qrCodeUrl || '',
       note: tx.note || '',
       date: tx.date.split('T')[0],
@@ -946,7 +948,10 @@ export default function DashboardView() {
                     grouped[dateKey].push(tx);
                   });
 
-                  return Object.entries(grouped).map(([dateKey, txs], gi) => {
+                  const sortedDateKeys = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+                  return sortedDateKeys.map((dateKey, gi) => {
+                    const txs = grouped[dateKey];
                     const dateObj = new Date(dateKey);
                     const now = new Date();
                     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

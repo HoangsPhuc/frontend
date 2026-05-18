@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
       prisma.transaction.findMany({
         where,
         include: { partner: true, user: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { date: 'desc' },
+          { createdAt: 'desc' },
+        ],
         take: limit,
         skip: offset,
       }),
